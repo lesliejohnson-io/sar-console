@@ -1,0 +1,33 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24.3633" height="25.0448" viewBox="0 0 24.3633 25.0448" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="symbols" filter="url(#filter0_d_0_311)">
+<path id="hydra" d="M13.8426 12.0066C13.9181 13.7918 15.395 15.3255 16.2169 16.1789L15.4864 16.9374C14.6646 16.084 13.2133 14.3872 11.4942 14.3087C9.73943 14.2286 8.71346 15.7827 7.70908 16.8258L7.06986 16.162C7.73946 15.5298 9.42959 13.9069 9.35247 12.0847C9.27692 10.2995 7.80003 8.76575 6.97819 7.91229L7.70863 7.15376C8.53047 8.00721 10.0074 9.54091 11.7264 9.61937C13.4812 9.69946 15.1354 7.84947 15.7441 7.15412L16.4746 7.91275C15.805 8.54487 13.7654 10.1843 13.8426 12.0066Z" fill="#F5F5F5"/>
+<mask id="stroke0_0_311" fill="white">
+<path d="M19.3633 17.7228C19.3633 19.0052 18.3622 20.0448 17.1273 20.0448C15.8923 20.0448 14.8912 19.0052 14.8912 17.7228C14.8912 16.4403 15.8923 15.4007 17.1273 15.4007C18.3622 15.4007 19.3633 16.4403 19.3633 17.7228Z"/>
+</mask>
+<ellipse id="Ellipse 2" cx="17.1273" cy="17.7228" rx="2.23607" ry="2.32207" stroke-width="2" stroke="#F5F5F5" mask="url(#stroke0_0_311)"/>
+<mask id="stroke1_0_311" fill="white">
+<path d="M19.2483 6.14695C19.2483 7.42939 18.2472 8.46902 17.0122 8.46902C15.7773 8.46902 14.7762 7.42939 14.7762 6.14695C14.7762 4.8645 15.7773 3.82488 17.0122 3.82488C18.2472 3.82488 19.2483 4.8645 19.2483 6.14695Z"/>
+</mask>
+<ellipse id="Ellipse 4" cx="17.0122" cy="6.14695" rx="2.23607" ry="2.32207" stroke-width="2" stroke="#F5F5F5" mask="url(#stroke1_0_311)"/>
+<mask id="stroke2_0_311" fill="white">
+<path d="M8.48649 17.7228C8.48649 19.0052 7.48537 20.0448 6.25042 20.0448C5.01548 20.0448 4.01436 19.0052 4.01436 17.7228C4.01436 16.4403 5.01548 15.4007 6.25042 15.4007C7.48537 15.4007 8.48649 16.4403 8.48649 17.7228Z"/>
+</mask>
+<ellipse id="Ellipse 3" cx="6.25042" cy="17.7228" rx="2.23607" ry="2.32207" stroke-width="2" stroke="#F5F5F5" mask="url(#stroke2_0_311)"/>
+<mask id="stroke3_0_311" fill="white">
+<path d="M8.37145 6.14695C8.37145 7.42939 7.37033 8.46902 6.13538 8.46902C4.90043 8.46902 3.89931 7.42939 3.89931 6.14695C3.89931 4.8645 4.90043 3.82488 6.13538 3.82488C7.37033 3.82488 8.37145 4.8645 8.37145 6.14695Z"/>
+</mask>
+<ellipse id="Ellipse 5" cx="6.13538" cy="6.14695" rx="2.23607" ry="2.32207" stroke-width="2" stroke="#F5F5F5" mask="url(#stroke3_0_311)"/>
+</g>
+<defs>
+<filter id="filter0_d_0_311" x="-1" y="-1" width="29.1111" height="30" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="2" dy="2"/>
+<feGaussianBlur stdDeviation="1.5"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_311"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_311" result="shape"/>
+</filter>
+</defs>
+</svg>

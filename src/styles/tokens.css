@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Every value here comes from the Figma variables in
+ * `Mixed-asset Territory Mapping` (file aPOBeiNYhyyliwomVwpdiz), read with
+ * get_variable_defs. Figma names the variables with slashes (`surface/app`);
+ * Tailwind reads a slash as an opacity modifier, so each slash becomes a
+ * hyphen here: `surface/app` -> `bg-surface-app`, `text/primary` ->
+ * `text-text-primary`. Nothing else changes. Components use these names only —
+ * never a hex value.
+ */
+@theme {
+  --color-surface-app: #1f2a2e;
+  --color-surface-panel: #131b1e;
+  --color-surface-card: #1a2427;
+
+  --color-border-subtle: #2b383c;
+
+  --color-text-primary: #e4ecee;
+  --color-text-secondary: #a6b4b8;
+  --color-text-on-interaction: #0b1220;
+
+  --color-interaction-primary: #8ec5ff;
+
+  --color-status-ready: #5fd068;
+  --color-status-autonomous: #cdb8ff;
+  --color-status-operator-set: #2ec4b5;
+  --color-status-needs-operator: #ffb020;
+  --color-status-degraded: #ff6b6b;
+  --color-status-out-of-contact: #87959a;
+  --color-status-unavailable: #6b7a80;
+
+  --color-map-searched: #9fd8e0;
+  --color-map-zone-boundary: #5e7378;
+  --color-map-zone-label: #c3d3d8;
+  --color-map-label-pill: #1e2a2e;
+
+  /*
+   * Not in the CLAUDE.md token list. `feedback/info` is a real Figma variable
+   * used as the inline warning's background (at low opacity); the other two are
+   * raw hexes on the Screen 2 map layer with no variable behind them. All three
+   * are flagged for design review.
+   */
+  --color-feedback-info: #c3d3d8;
+  --color-map-backdrop: #252528;
+  --color-map-patch: #233941;
+
+  /* Elevation, as the frame draws it. Figma has no variables for these. */
+  --shadow-top-bar: 0px 8px 24px 0px rgb(0 0 0 / 0.5);
+  --shadow-panel: 0px 10px 28px 0px rgb(0 0 0 / 0.55);
+  --shadow-legend: 0px 6px 20px 0px rgb(0 0 0 / 0.45);
+  --drop-shadow-marker: 2px 2px 1.5px rgb(0 0 0 / 0.5);
+
+  --font-sans: 'Lato', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-surface-app);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Google's Lato ships 100/300/400/700/900 — no 500 or 600, which the Figma
+   * file uses. The design weights stay as authored and the browser resolves
+   * 500 -> 400 and 600 -> 700 by nearest-face matching.
+   */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
