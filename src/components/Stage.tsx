@@ -1,8 +1,20 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { STAGE } from '../data/mapGeometry';
 
 /** Below this the console is too cramped to read; show a note instead. */
 const MIN_WIDTH = 1100;
+
+/**
+ * How far the stage is scaled to fit the viewport.
+ *
+ * Anything that reads pointer movement needs this. dnd-kit reports a drag
+ * delta in client pixels, but a marker's transform is applied inside the
+ * scaled stage, so applying the delta raw moves the marker by delta x scale
+ * and it slides out from under the cursor. Dividing by this puts it back.
+ */
+const StageScaleContext = createContext(1);
+
+export const useStageScale = (): number => useContext(StageScaleContext);
 
 /**
  * The console is a fixed 1440 x 1035 stage, scaled to fit the viewport. Every
@@ -36,13 +48,15 @@ export function Stage({ children }: { children: ReactNode }) {
   const scale = Math.min(viewport.width / STAGE.width, viewport.height / STAGE.height);
 
   return (
-    <div className="flex h-full w-full items-center justify-center overflow-hidden bg-surface-app">
-      <div
-        className="relative shrink-0 origin-center"
-        style={{ width: STAGE.width, height: STAGE.height, transform: `scale(${scale})` }}
-      >
-        {children}
+    <StageScaleContext.Provider value={scale}>
+      <div className="flex h-full w-full items-center justify-center overflow-hidden bg-surface-app">
+        <div
+          className="relative shrink-0 origin-center"
+          style={{ width: STAGE.width, height: STAGE.height, transform: `scale(${scale})` }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </StageScaleContext.Provider>
   );
 }

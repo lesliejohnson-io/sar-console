@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CONTRIBUTION, coverage, overallCoverage, weakestSector } from './coverage';
-import { SECTOR_IDS } from '../data/sectors';
+import { COVERAGE_TARGET, SECTOR_IDS, SECTORS_BY_ID } from '../data/sectors';
 import type { AssetType, SectorId } from '../data/types';
 
 const times = (type: AssetType, n: number): AssetType[] => Array<AssetType>(n).fill(type);
@@ -95,5 +95,51 @@ describe('coverage model properties', () => {
   it('names the weakest sector', () => {
     expect(weakestSector(coverageOf(OPEN))).toBe('D');
     expect(weakestSector(coverageOf(MOVED))).toBe('D');
+  });
+});
+
+/**
+ * The low-coverage warning is never written down anywhere: a sector shows it
+ * when the model puts it under the target, and stops showing it when the model
+ * does not. These lock the threshold the operator actually sees, so a change
+ * to the contribution table cannot quietly turn the warning off.
+ */
+describe('low-coverage warning threshold', () => {
+  const belowTarget = (sector: SectorId, units: AssetType[]) =>
+    coverage(sector, units) < COVERAGE_TARGET;
+
+  const D_OPEN: AssetType[] = ['ROC', ...times('HYD', 4)];
+
+  it('warns on Sector D at open: 44%, 16 points short of the target', () => {
+    expect(coverage('D', D_OPEN)).toBe(44);
+    expect(COVERAGE_TARGET - coverage('D', D_OPEN)).toBe(16);
+    expect(belowTarget('D', D_OPEN)).toBe(true);
+  });
+
+  it('clears the warning once both Krakens arrive', () => {
+    expect(coverage('D', MOVED.D)).toBe(82);
+    expect(belowTarget('D', MOVED.D)).toBe(false);
+  });
+
+  it('stays clear with one Kraken, and warns again when the last one leaves', () => {
+    // Worth knowing which click brings the warning back: one Kraken still
+    // holds Sector D above target, so it takes the last one leaving.
+    const oneKraken: AssetType[] = [...D_OPEN, 'KRK'];
+
+    expect(coverage('D', oneKraken)).toBe(68);
+    expect(belowTarget('D', oneKraken)).toBe(false);
+    expect(belowTarget('D', D_OPEN)).toBe(true);
+  });
+
+  it('leaves every other sector in the opening plan above target', () => {
+    for (const sector of SECTOR_IDS) {
+      if (sector === 'D') continue;
+      expect(belowTarget(sector, OPEN[sector])).toBe(false);
+    }
+  });
+
+  it('calls out a HIGH sector, which is what makes Sector D urgent', () => {
+    expect(SECTORS_BY_ID.D.priority).toBe('HIGH');
+    expect(SECTORS_BY_ID.A.priority).toBe('HIGH');
   });
 });

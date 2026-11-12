@@ -14,6 +14,10 @@ import glyphGrf from '../assets/icons/glyph-grf.svg';
  *
  * Positions are the exported Figma geometry for the 52 x 44 marker: the glyph
  * sits at its natural size, the badge is 8 px, and the pill fills the bottom.
+ *
+ * Clicking a group of more than one fans it out into its individual units, so
+ * the operator can take hold of one. The face itself is shared with
+ * `UnitMarker`, which is what a fanned-out unit is.
  */
 
 const GLYPH: Record<AssetType, { src: string; x: number; y: number; w: number; h: number }> = {
@@ -30,25 +34,21 @@ const BADGE: Record<AssetType, { x: number; y: number }> = {
   GRF: { x: 33, y: 18 },
 };
 
-export interface GroupMarkerProps {
+/** The glyph, badge and pill. Laid out in the marker's own 52 x 44 box. */
+export function MarkerFace({
+  type,
+  status,
+  suffix,
+}: {
   type: AssetType;
-  unitIds: string[];
   status: UnitStatus;
-  x: number;
-  y: number;
-}
-
-export function GroupMarker({ type, unitIds, status, x, y }: GroupMarkerProps) {
+  suffix: string;
+}) {
   const glyph = GLYPH[type];
   const badge = BADGE[type];
-  const count = unitIds.length;
-  const suffix = count === 1 ? String(unitNumber(unitIds[0])).padStart(2, '0') : `x${count}`;
 
   return (
-    <div
-      className="absolute"
-      style={{ left: x, top: y, width: MARKER.width, height: MARKER.height }}
-    >
+    <>
       <img
         alt=""
         src={glyph.src}
@@ -64,6 +64,66 @@ export function GroupMarker({ type, unitIds, status, x, y }: GroupMarkerProps) {
         <p>{type} ·</p>
         <p>{suffix}</p>
       </div>
-    </div>
+    </>
+  );
+}
+
+/** "HYD-07" -> "07" */
+export const padded = (unitId: string): string =>
+  String(unitNumber(unitId)).padStart(2, '0');
+
+export interface GroupMarkerProps {
+  type: AssetType;
+  unitIds: string[];
+  status: UnitStatus;
+  x: number;
+  y: number;
+  /** Omitted for a group that cannot be opened, such as on a static screen. */
+  onExpand?: () => void;
+  expanded?: boolean;
+  label?: string;
+}
+
+export function GroupMarker({
+  type,
+  unitIds,
+  status,
+  x,
+  y,
+  onExpand,
+  expanded = false,
+  label,
+}: GroupMarkerProps) {
+  const count = unitIds.length;
+  const suffix = count === 1 ? padded(unitIds[0]) : `x${count}`;
+  const position = { left: x, top: y, width: MARKER.width, height: MARKER.height };
+
+  if (!onExpand) {
+    return (
+      <div className="absolute" style={position}>
+        <MarkerFace type={type} status={status} suffix={suffix} />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="absolute cursor-pointer rounded-[6px]"
+      style={position}
+      aria-expanded={expanded}
+      aria-label={
+        label ??
+        (count === 1
+          ? `${unitIds[0]}. Open to move it.`
+          : `${type} group, ${count} units. Open to move one.`)
+      }
+      onClick={(event) => {
+        event.stopPropagation();
+        onExpand();
+      }}
+    >
+      <MarkerFace type={type} status={status} suffix={suffix} />
+    </button>
   );
 }

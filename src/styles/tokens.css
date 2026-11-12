@@ -75,6 +75,18 @@
    * file uses. The design weights stay as authored and the browser resolves
    * 500 -> 400 and 600 -> 700 by nearest-face matching.
    */
+
+  /*
+   * Every control shows where the keyboard is. The whole plan can be changed
+   * without a pointer, so the focus ring is not decoration: it is the only
+   * thing telling the operator which unit they are about to move. Drawn in
+   * `interaction/primary` with an offset, so it reads on both the panel and
+   * the map.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-interaction-primary);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

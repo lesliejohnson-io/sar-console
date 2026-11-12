@@ -7,6 +7,7 @@ import {
   PROPOSED_STAGED,
 } from '../data/plan';
 import { AVAILABLE_UNITS } from '../data/assets';
+import { canOperatorMove } from '../data/reach';
 import { SECTOR_IDS } from '../data/sectors';
 import { coverage, overallCoverage, weakestSector } from '../lib/coverage';
 import { byUnitId, unitType } from '../lib/units';
@@ -46,9 +47,19 @@ export const usePlanStore = create<PlanState>((set) => ({
       const current = state.assignments[unitId];
       if (!current || current.target === toSector) return state;
 
+      // The same guard the map and the menu use, so no path can write a move
+      // the UI would have refused.
+      if (!canOperatorMove(unitId, toSector).ok) return state;
+
       const from = current.target === 'ALL' ? undefined : (current.target as SectorId);
 
+      // Nothing launches unseen: an operator change returns both the sector
+      // the unit left and the one it joined to "Stage sector".
+      const staged = { ...state.staged, [toSector]: false };
+      if (from) staged[from] = false;
+
       return {
+        staged,
         assignments: {
           ...state.assignments,
           [unitId]: {
@@ -60,10 +71,6 @@ export const usePlanStore = create<PlanState>((set) => ({
           },
         },
       };
-      // Staged flags are deliberately left alone here. CLAUDE.md says an
-      // operator change to a staged sector returns it to "Stage sector", but
-      // frame 158:572 still shows Sector B staged and "3 SECTORS" after the
-      // Krakens leave it. Flagged for Leslie; the rule lands in Milestone 2.
     }),
 
   selectSector: (sector) => set({ selectedSector: sector }),
@@ -90,6 +97,37 @@ export const unitsIn = (assignments: Assignments, target: AssignmentTarget): str
 
 export const sectorCoverage = (assignments: Assignments, sector: SectorId): number =>
   coverage(sector, unitsIn(assignments, sector).map(unitType));
+
+/**
+ * What a sector's coverage would be if this unit moved there — the number the
+ * drag preview puts on the map label and the "Move to sector…" menu puts
+ * beside each sector. Both read it from here, so they can never disagree, and
+ * neither can disagree with what the drop actually produces.
+ *
+ * Passing the unit's own sector returns that sector's coverage unchanged.
+ */
+export const coverageAfterMove = (
+  assignments: Assignments,
+  unitId: string,
+  toSector: SectorId,
+): number => {
+  const units = unitsIn(assignments, toSector);
+  if (units.includes(unitId)) return coverage(toSector, units.map(unitType));
+  return coverage(toSector, [...units, unitId].map(unitType));
+};
+
+/** And what the sector the unit leaves would be left with. */
+export const coverageAfterRemoval = (
+  assignments: Assignments,
+  unitId: string,
+  fromSector: SectorId,
+): number =>
+  coverage(
+    fromSector,
+    unitsIn(assignments, fromSector)
+      .filter((id) => id !== unitId)
+      .map(unitType),
+  );
 
 export const coverageBySector = (assignments: Assignments): Record<SectorId, number> =>
   Object.fromEntries(

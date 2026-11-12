@@ -16,6 +16,8 @@ export interface TaskingPanelProps {
   stagedCount: number;
   lockedUnits: string[];
   selectedSector: SectorId | null;
+  onMove: (unitId: string, toSector: SectorId) => void;
+  onStage: (sectorId: SectorId) => void;
 }
 
 export function TaskingPanel({
@@ -27,6 +29,8 @@ export function TaskingPanel({
   stagedCount,
   lockedUnits,
   selectedSector,
+  onMove,
+  onStage,
 }: TaskingPanelProps) {
   return (
     <>
@@ -99,6 +103,8 @@ export function TaskingPanel({
             staged={staged[sector.id]}
             selected={sector.id === selectedSector}
             lockedUnits={lockedUnits}
+            onMove={onMove}
+            onStage={onStage}
           />
         ))}
 
