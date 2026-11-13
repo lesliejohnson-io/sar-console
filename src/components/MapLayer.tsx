@@ -183,7 +183,9 @@ export function MapLayer({
       onDragCancel={onDragCancel}
     >
       <div
-        className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
+        role="region"
+      aria-label="Mission map: sectors and the units proposed for each"
+      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
         style={{ width: STAGE.width, height: STAGE.height }}
         onClick={() => onFan(null)}
       >

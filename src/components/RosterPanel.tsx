@@ -48,9 +48,9 @@ export function RosterPanel({
         className="absolute flex items-center overflow-hidden rounded-tr-[8px] border-t border-r border-b border-border-subtle pl-[14px]"
         style={{ left: PANEL.x, top: PANEL.y, width: PANEL.width, height: PANEL.titleHeight }}
       >
-        <h1 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
+        <h2 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
           Asset roster
-        </h1>
+        </h2>
       </div>
 
       <div

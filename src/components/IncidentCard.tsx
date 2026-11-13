@@ -64,7 +64,7 @@ export function IncidentCard({
   return (
     <section
       aria-label={`Incident: ${INCIDENT.title}`}
-      className="flex w-full flex-col items-start gap-[8px] overflow-hidden border-l-2 border-status-needs-operator bg-feedback-info/10 pt-[8px] pr-[10px] pb-[10px] pl-[12px] leading-[normal]"
+      className="flex w-full flex-col items-start gap-[8px] overflow-hidden border-l-2 border-status-needs-operator bg-feedback-info/10 pt-[8px] pr-[10px] pb-[10px] pl-[12px]"
     >
       <div className="flex w-full items-center gap-[6px] overflow-hidden">
         <p className="shrink-0 font-mono text-[12px] whitespace-nowrap text-text-secondary">

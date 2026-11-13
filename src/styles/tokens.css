@@ -68,6 +68,15 @@
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+
+    /*
+     * The Figma frames set every text layer to `leading-[normal]`, while
+     * Tailwind's preflight puts the document at 1.5. Left alone the console
+     * runs a little looser than it was drawn, which shows up most where a card
+     * stacks several short lines. Set once here so the whole stage matches the
+     * file; a component that genuinely wants more leading asks for it.
+     */
+    line-height: normal;
   }
 
   /*

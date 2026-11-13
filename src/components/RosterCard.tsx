@@ -44,7 +44,7 @@ export function RosterCard({
 
   return (
     <section
-      aria-label={meta.className}
+      aria-labelledby={`roster-${type}`}
       tabIndex={0}
       onMouseEnter={() => onHover(type)}
       onMouseLeave={() => onHover(null)}
@@ -60,9 +60,17 @@ export function RosterCard({
       }}
     >
       <div className="flex h-[30px] w-full shrink-0 items-center gap-[8px] overflow-hidden pr-[5px] pl-[9px]">
-        <p className="shrink-0 text-[14px] font-semibold whitespace-nowrap text-text-primary">
+        {/*
+          * The type's name is the card's heading and its accessible name
+          * both, so the roster can be navigated by heading rather than as
+          * four separate regions competing with the map and the rail.
+          */}
+        <h3
+          id={`roster-${type}`}
+          className="shrink-0 text-[14px] font-semibold whitespace-nowrap text-text-primary"
+        >
           {meta.className}
-        </p>
+        </h3>
         <div className="h-px min-w-px flex-1" />
         <p className="shrink-0 text-[12px] whitespace-nowrap text-text-secondary">{count}</p>
       </div>

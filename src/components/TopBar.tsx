@@ -31,9 +31,14 @@ export function TopBarChrome({
         style={{ left: TOP_BAR.x, top: TOP_BAR.y, width: TOP_BAR.width, height: TOP_BAR.height }}
       />
 
-      <p className="absolute top-[15px] left-[21px] text-[22px] font-black whitespace-pre text-text-primary">
+      {/*
+        * The mission is the page's one h1, so a screen reader landing on any
+        * screen is told which mission it is looking at before anything else.
+        * The panels below are h2s under it.
+        */}
+      <h1 className="absolute top-[15px] left-[21px] text-[22px] font-black whitespace-pre text-text-primary">
         SAR-1102  ·  Coastal Flood Response
-      </p>
+      </h1>
       <p className="absolute top-[44px] left-[21px] font-mono text-[12px] font-medium whitespace-nowrap text-text-secondary">
         Charleston, SC · 32.705, -80.132
       </p>

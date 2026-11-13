@@ -28,6 +28,20 @@ export const STAT_BAR = { x: 444, y: 12, height: 61 };
 export const LEGEND = { x: 9, y: 989, width: 1030, height: 34 };
 export const PANEL = { x: 1047, y: 12, width: 384, titleHeight: 61, height: 1007 };
 
+/** The band at the foot of the rail that holds the one action on every screen. */
+export const RAIL_FOOTER_HEIGHT = 52;
+
+/**
+ * Where the rail's drawn scrollbar sits, in stage coordinates. It is a sibling
+ * of the scrolling list rather than a child of it: drawn inside, it scrolled
+ * away with the content it was describing.
+ */
+export const RAIL_SCROLLBAR = {
+  left: PANEL.x + PANEL.width - 8,
+  top: PANEL.y + PANEL.titleHeight + 16,
+  height: PANEL.height - PANEL.titleHeight - RAIL_FOOTER_HEIGHT - 26,
+};
+
 /** Map label for each sector: the anchor is the left edge, centred vertically. */
 export const SECTOR_LABEL_POS: Record<SectorId, { x: number; y: number }> = {
   A: { x: 895.63, y: 420.48 },

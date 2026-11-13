@@ -28,6 +28,9 @@ import { MapBackdrop } from './MapBackdrop';
 import type { SectorLive } from '../store/useLiveStore';
 import type { AssetType, SectorId, UnitStatus } from '../data/types';
 
+/** How far a marker steps back while a feed line picks out other units. */
+const HIGHLIGHT_DIM = 0.3;
+
 export interface LiveMapLayerProps {
   unitsBySector: Record<SectorId, string[]>;
   relayUnits: string[];
@@ -48,6 +51,14 @@ export interface LiveMapLayerProps {
   /** Units that have been sent back to staging and are no longer on station. */
   returnedToStaging: readonly string[];
   selectedSector: SectorId | null;
+  /**
+   * What a selected feed line is about. Everything else on the map steps back
+   * so the units and sector the line names stand out — `spec.md`: "Selecting a
+   * feed event highlights the assets and sector involved."
+   *
+   * **Flagged for design review:** no frame draws this state.
+   */
+  highlight: { units: string[]; sector: SectorId | null } | null;
 }
 
 /**
@@ -71,18 +82,27 @@ export function LiveMapLayer({
   movingRelay,
   returnedToStaging,
   selectedSector,
+  highlight,
 }: LiveMapLayerProps) {
   const placed = placements(unitsBySector, relayUnits, movingRelay, returnedToStaging);
+  const lit = highlight ? new Set(highlight.units) : null;
 
   return (
     <div
+      role="region"
+      aria-label="Mission map: sectors, searched ground and live unit positions"
       className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
       style={{ width: STAGE.width, height: STAGE.height }}
     >
       <MapBackdrop />
 
       {SECTOR_SHAPES.map((shape) => (
-        <SectorShape key={shape.id} shape={shape} searched={live[shape.id].searched} />
+        <SectorShape
+          key={shape.id}
+          shape={shape}
+          searched={live[shape.id].searched}
+          highlighted={highlight !== null && highlight.sector === shape.id}
+        />
       ))}
 
       {SECTORS.map((sector) => {
@@ -98,11 +118,13 @@ export function LiveMapLayer({
           <p
             key={sector.id}
             className={`absolute -translate-y-1/2 text-[14px] whitespace-nowrap ${
-              flagged
-                ? 'font-medium text-status-needs-operator'
-                : sector.id === selectedSector
-                  ? 'font-semibold text-map-zone-label'
-                  : 'font-medium text-map-zone-label'
+              highlight !== null && highlight.sector === sector.id
+                ? 'font-semibold text-interaction-primary'
+                : flagged
+                  ? 'font-medium text-status-needs-operator'
+                  : sector.id === selectedSector
+                    ? 'font-semibold text-map-zone-label'
+                    : 'font-medium text-map-zone-label'
             }`}
             style={{ left: position.x, top: position.y }}
           >
@@ -135,6 +157,8 @@ export function LiveMapLayer({
         const lost = marker.unitIds.every((id) => outOfContact.includes(id));
         const isRelayDown = relayDown && marker.unitIds.includes(INCIDENT.relayUnit);
         const exception = lost || isRelayDown;
+        // While a feed line is selected, everything it is not about steps back.
+        const unlit = lit !== null && !marker.unitIds.some((id) => lit.has(id));
 
         return (
           <GroupMarker
@@ -152,8 +176,8 @@ export function LiveMapLayer({
              * one marker that matters; the map says "HYD ×7 · OUT OF CONTACT"
              * over them instead, as frame 289:2394 does.
              */
-            showLabel={isRelayDown || marker.unitIds.length > 1}
-            opacity={lost ? UNTRUSTED_OPACITY : undefined}
+            showLabel={isRelayDown || marker.unitIds.length > 1 || (lit !== null && !unlit)}
+            opacity={unlit ? HIGHLIGHT_DIM : lost ? UNTRUSTED_OPACITY : undefined}
             label={labelFor(marker.unitIds, marker.type, lost, isRelayDown, since)}
           />
         );
@@ -246,9 +270,11 @@ function MapPill({
 function SectorShape({
   shape,
   searched,
+  highlighted,
 }: {
   shape: (typeof SECTOR_SHAPES)[number];
   searched: number;
+  highlighted: boolean;
 }) {
   const reach = Math.sqrt(Math.max(0, Math.min(100, searched)) / 100);
 
@@ -275,8 +301,10 @@ function SectorShape({
         d={shape.d}
         fill="none"
         strokeLinejoin="round"
-        strokeWidth={SECTOR_STROKE_WIDTH.default}
-        className="stroke-map-zone-boundary"
+        strokeWidth={
+          highlighted ? SECTOR_STROKE_WIDTH.selected : SECTOR_STROKE_WIDTH.default
+        }
+        className={highlighted ? 'stroke-interaction-primary' : 'stroke-map-zone-boundary'}
       />
     </svg>
   );

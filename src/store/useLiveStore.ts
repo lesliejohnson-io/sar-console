@@ -37,6 +37,9 @@ export type Resolution = 'a' | 'b' | 'held';
 export interface LogEntry {
   minute: number;
   text: string;
+  /** What the line is about, so selecting it can highlight them. */
+  units?: string[];
+  sector?: SectorId;
   /** Purple marks the autonomy acting alone, teal an operator choice. */
   source: 'autonomy' | 'operator';
   /** Carries the amber marker: a line the operator had to decide. */
@@ -55,6 +58,8 @@ export interface LiveState {
   feedHidden: boolean;
   /** Whether the grouped effects under the root cause are open. */
   effectsOpen: boolean;
+  /** The feed line the operator has selected, by `entryKey`. */
+  selectedEvent: string | null;
 
   advance: () => void;
   jumpTo: (minute: number) => void;
@@ -63,6 +68,7 @@ export interface LiveState {
   toggleHoldAll: () => void;
   toggleFeed: () => void;
   toggleEffects: () => void;
+  selectEvent: (key: string | null) => void;
   reset: () => void;
 }
 
@@ -76,6 +82,7 @@ const initial = () => ({
   log: [] as LogEntry[],
   feedHidden: false,
   effectsOpen: false,
+  selectedEvent: null as string | null,
 });
 
 export const useLiveStore = create<LiveState>((set) => ({
@@ -110,6 +117,7 @@ export const useLiveStore = create<LiveState>((set) => ({
           {
             minute: state.minute,
             source: 'operator' as const,
+            sector,
             text: `Sector ${sector} paused. Its units hold at their last position.`,
           },
         ],
@@ -138,18 +146,31 @@ export const useLiveStore = create<LiveState>((set) => ({
 
   toggleEffects: () => set((state) => ({ effectsOpen: !state.effectsOpen })),
 
+  /* Selecting the line that is already selected clears it, as does Escape. */
+  selectEvent: (key) =>
+    set((state) => ({ selectedEvent: state.selectedEvent === key ? null : key })),
+
   reset: () => set(initial()),
 }));
 
 /** The one line the feed keeps once the incident is over. */
-function chosenEntry(option: Resolution, minute: number): LogEntry {
+function chosenEntry(resolution: Resolution, minute: number): LogEntry {
   const held = `Held ${formatUnitRange(INCIDENT.affectedUnits)} at last position`;
   const chosen =
-    option === 'held' ? held : INCIDENT.options.find((one) => one.key === option)!.title;
+    resolution === 'held'
+      ? held
+      : INCIDENT.options.find((one) => one.key === resolution)!.title;
+  const option = INCIDENT.options.find((one) => one.key === resolution);
   return {
     minute,
     source: 'operator',
     flagged: true,
+    sector: INCIDENT.sector,
+    units: [
+      ...INCIDENT.affectedUnits,
+      INCIDENT.relayUnit,
+      ...(option?.moveUnit ? [option.moveUnit] : []),
+    ],
     text: `${INCIDENT.title}. ${chosen} — ${OPERATOR}.`,
   };
 }
@@ -290,7 +311,13 @@ export const clock = (minute: number): string => clockAt(LIVE_START, minute);
 export function feed(state: LiveState): LogEntry[] {
   const scripted: LogEntry[] = SCRIPTED_EVENTS.filter(
     (event) => event.minute <= state.minute,
-  ).map((event) => ({ minute: event.minute, text: event.text, source: 'autonomy' as const }));
+  ).map((event) => ({
+    minute: event.minute,
+    text: event.text,
+    units: event.units,
+    sector: event.sector,
+    source: 'autonomy' as const,
+  }));
 
   /*
    * The operator's own lines are filtered by minute as well, so the feed says
@@ -305,4 +332,23 @@ export function feed(state: LiveState): LogEntry[] {
   );
 
   return [...scripted, ...log].sort((a, b) => b.minute - a.minute);
+}
+
+/** A feed line's stable identity, which is what selection is stored as. */
+export const entryKey = (entry: LogEntry): string => `${entry.minute}-${entry.text}`;
+
+/** The units and sector a selected feed line is about, if one is selected. */
+export function highlighted(
+  state: LiveState,
+  unitsBySector: Record<SectorId, string[]>,
+): { units: string[]; sector: SectorId | null } | null {
+  if (state.selectedEvent === null) return null;
+
+  const entry = feed(state).find((one) => entryKey(one) === state.selectedEvent);
+  if (!entry) return null;
+
+  const sector = entry.sector ?? null;
+  // A line that names only a sector is about everything flying in it.
+  const units = entry.units ?? (sector ? unitsBySector[sector] : []);
+  return { units, sector };
 }

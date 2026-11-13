@@ -18,6 +18,7 @@ import {
   clock,
   feed,
   furthestBehind,
+  highlighted,
   incidentPhase,
   liveBySector,
   outOfContact,
@@ -48,6 +49,8 @@ export function Live() {
   const launched = usePlanStore((state) => state.launched);
   const selectedSector = usePlanStore((state) => state.selectedSector);
   const resetPlan = usePlanStore((state) => state.reset);
+  const lockedUnits = usePlanStore((state) => state.lockedUnits);
+  const toggleSectorLock = usePlanStore((state) => state.toggleSectorLock);
 
   const live = useLiveStore();
   const [announcement, setAnnouncement] = useState('');
@@ -91,6 +94,20 @@ export function Live() {
     launchPlan();
   }, [atIncident, moveUnit, setStaged, launchPlan]);
 
+  /*
+   * Escape clears a selected feed line, the same key that collapses a fanned
+   * group on Screen 2. Nothing on this screen traps the operator in a state
+   * they have to click their way out of.
+   */
+  const selectEvent = live.selectEvent;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') selectEvent(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectEvent]);
+
   const phase = incidentPhase(live);
   const unresolved = phase === 'deciding' || phase === 'in-progress';
 
@@ -112,12 +129,12 @@ export function Live() {
           style={{ left: 9, top: 85, width: 460 }}
         >
           {/* No Figma frame for this state — copy proposed, flagged for review. */}
-          <h1
+          <h2
             id="live-title"
             className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase"
           >
             Nothing is flying
-          </h1>
+          </h2>
           <p className="text-[12px] text-text-secondary">
             This screen follows a plan that has launched. Review the proposed tasking and
             send it up first.
@@ -283,6 +300,7 @@ export function Live() {
           live.resolution === 'b' && phase === 'resolved' ? INCIDENT.affectedUnits : []
         }
         selectedSector={selectedSector}
+        highlight={highlighted(live, unitsBySector)}
       />
 
       <LiveTopBar
@@ -302,12 +320,16 @@ export function Live() {
         flags={flags}
         holding={live.heldAllAt !== null}
         onToggleHold={live.toggleHoldAll}
+        lockedUnits={lockedUnits}
+        onToggleLock={toggleSectorLock}
       />
 
       <EventFeed
         entries={feed(live)}
         hidden={live.feedHidden}
         onToggle={live.toggleFeed}
+        selected={live.selectedEvent}
+        onSelect={live.selectEvent}
         incident={
           incidentOpen ? (
             <div ref={incidentRef} tabIndex={-1} className="w-full">

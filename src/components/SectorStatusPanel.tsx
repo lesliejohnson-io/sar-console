@@ -1,15 +1,13 @@
 import type { ReactNode } from 'react';
-import { PANEL } from '../data/mapGeometry';
+import { PANEL, RAIL_FOOTER_HEIGHT, RAIL_SCROLLBAR } from '../data/mapGeometry';
 import { SECTORS } from '../data/sectors';
 import { formatUnitRange } from '../lib/units';
 import { LiveSectorSection } from './LiveSectorSection';
+import { RailScrollbar, useRailScroll } from './RailScrollbar';
 import { UnitRow } from './UnitRow';
 import type { SectorLive } from '../store/useLiveStore';
 import type { Assignments } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
-
-/** The band at the foot of the rail that holds the one action on this screen. */
-const FOOTER_HEIGHT = 52;
 
 export interface SectorStatusPanelProps {
   assignments: Assignments;
@@ -21,6 +19,8 @@ export interface SectorStatusPanelProps {
   flags: Partial<Record<SectorId, ReactNode>>;
   holding: boolean;
   onToggleHold: () => void;
+  lockedUnits: string[];
+  onToggleLock: (sectorId: SectorId) => void;
 }
 
 /**
@@ -41,7 +41,11 @@ export function SectorStatusPanel({
   flags,
   holding,
   onToggleHold,
+  lockedUnits,
+  onToggleLock,
 }: SectorStatusPanelProps) {
+  const { ref, metrics } = useRailScroll<HTMLDivElement>();
+
   return (
     <>
       <div
@@ -53,9 +57,9 @@ export function SectorStatusPanel({
         className="absolute flex items-center gap-[4px] overflow-hidden rounded-tr-[8px] border-t border-r border-b border-border-subtle pr-[12px] pl-[14px]"
         style={{ left: PANEL.x, top: PANEL.y, width: PANEL.width, height: PANEL.titleHeight }}
       >
-        <h1 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
+        <h2 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
           Sector status
-        </h1>
+        </h2>
         <div className="h-px min-w-px flex-1" />
       </div>
 
@@ -66,16 +70,16 @@ export function SectorStatusPanel({
         * this screen stops 36 aircraft: it cannot be a thing the operator has
         * to scroll to find. So the sectors take the space that is left and the
         * button keeps the foot of the rail, which is where the primary action
-        * sits on every screen. The drawn scrollbar is still the static one
-        * from the frame — flagged for the polish pass.
+        * sits on every screen.
         */}
       <div
+        ref={ref}
         className="absolute flex flex-col items-start gap-[8px] overflow-x-hidden overflow-y-auto py-[8px] pr-[14px] pl-[4px] [scrollbar-width:none]"
         style={{
           left: PANEL.x,
           top: PANEL.y + PANEL.titleHeight,
           width: PANEL.width,
-          height: PANEL.height - PANEL.titleHeight - FOOTER_HEIGHT,
+          height: PANEL.height - PANEL.titleHeight - RAIL_FOOTER_HEIGHT,
         }}
       >
         <div className="flex w-full shrink-0 items-start overflow-hidden px-[12px] py-[2px]">
@@ -105,24 +109,23 @@ export function SectorStatusPanel({
             live={live[sector.id]}
             outOfContact={outOfContact}
             flag={flags[sector.id]}
+            lockedUnits={lockedUnits}
+            onToggleLock={onToggleLock}
           />
         ))}
 
         <div className="min-h-px w-full flex-1" />
-
-        <div aria-hidden className="absolute top-[24px] right-[4px] bottom-[10px] w-[4px]">
-          <div className="absolute top-0 left-0 h-[832px] w-[4px] rounded-[2px] bg-text-secondary opacity-15" />
-          <div className="absolute top-0 left-0 h-[599px] w-[4px] rounded-[2px] bg-text-secondary opacity-60" />
-        </div>
       </div>
+
+      <RailScrollbar metrics={metrics} style={RAIL_SCROLLBAR} />
 
       <div
         className="absolute flex flex-col items-center overflow-hidden px-[10px] py-[4px]"
         style={{
           left: PANEL.x,
-          top: PANEL.y + PANEL.height - FOOTER_HEIGHT,
+          top: PANEL.y + PANEL.height - RAIL_FOOTER_HEIGHT,
           width: PANEL.width,
-          height: FOOTER_HEIGHT,
+          height: RAIL_FOOTER_HEIGHT,
         }}
       >
         <div className="flex h-[44px] w-full shrink-0 flex-col items-center overflow-hidden px-[6px] py-[4px]">

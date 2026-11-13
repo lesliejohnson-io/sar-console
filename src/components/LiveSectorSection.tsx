@@ -3,12 +3,12 @@ import { SECTORS_BY_ID } from '../data/sectors';
 import { formatUnitRange, groupByType } from '../lib/units';
 import { LiveCoverageBar } from './LiveCoverageBar';
 import { PriorityBadge } from './PriorityBadge';
+import { SectorLockButton } from './SectorLockButton';
 import { UnitRow } from './UnitRow';
 import { OperatorSetGroup, operatorNote } from './SectorSection';
 import type { SectorLive } from '../store/useLiveStore';
 import type { Assignments } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
-import lockOpen from '../assets/icons/lock-open.svg';
 
 export interface LiveSectorSectionProps {
   sectorId: SectorId;
@@ -19,6 +19,9 @@ export interface LiveSectorSectionProps {
   outOfContact: string[];
   /** The amber card, when this sector has something the operator must decide. */
   flag?: ReactNode;
+  /** Units the autonomy may not re-task. */
+  lockedUnits: string[];
+  onToggleLock: (sectorId: SectorId) => void;
 }
 
 /**
@@ -37,6 +40,8 @@ export function LiveSectorSection({
   live,
   outOfContact,
   flag,
+  lockedUnits,
+  onToggleLock,
 }: LiveSectorSectionProps) {
   const sector = SECTORS_BY_ID[sectorId];
   const groups = groupByType(unitIds);
@@ -63,9 +68,10 @@ export function LiveSectorSection({
   return (
     <div className="flex w-full shrink-0 flex-col items-start gap-[2px] rounded-[6px] border border-surface-card bg-surface-card px-[6px] pt-[5px] pb-[6px]">
       <div className="flex h-[30px] w-full items-center gap-[4px] pl-[9px]">
-        <p className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">
+        {/* A heading, so the rail can be navigated sector by sector. */}
+        <h3 className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">
           {sector.label}
-        </p>
+        </h3>
         <PriorityBadge priority={sector.priority} />
         <div className="h-px min-w-px flex-1" />
         <div className="flex shrink-0 items-start overflow-hidden pr-[2px] pl-[6px]">
@@ -79,13 +85,11 @@ export function LiveSectorSection({
             {status.label}
           </p>
         </div>
-        <button
-          type="button"
-          aria-label={`Lock ${sector.label}`}
-          className="flex size-[26px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[3px] border border-text-secondary"
-        >
-          <img alt="" src={lockOpen} width={16} height={16} className="block" />
-        </button>
+        <SectorLockButton
+          sectorLabel={sector.label}
+          locked={unitIds.length > 0 && unitIds.every((id) => lockedUnits.includes(id))}
+          onToggle={() => onToggleLock(sectorId)}
+        />
       </div>
 
       <LiveCoverageBar

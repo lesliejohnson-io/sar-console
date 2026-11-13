@@ -5,10 +5,10 @@ import { CoverageBar } from './CoverageBar';
 import { InlineWarning } from './InlineWarning';
 import { MoveToSectorMenu } from './MoveToSectorMenu';
 import { PriorityBadge } from './PriorityBadge';
+import { SectorLockButton } from './SectorLockButton';
 import { UnitRow } from './UnitRow';
 import type { Assignments } from '../store/usePlanStore';
 import type { AssetType, SectorId } from '../data/types';
-import lockOpen from '../assets/icons/lock-open.svg';
 
 export interface SectorSectionProps {
   sectorId: SectorId;
@@ -21,6 +21,7 @@ export interface SectorSectionProps {
   lockedUnits: string[];
   onMove: (unitId: string, toSector: SectorId) => void;
   onStage: (sectorId: SectorId) => void;
+  onToggleLock: (sectorId: SectorId) => void;
 }
 
 export function SectorSection({
@@ -34,6 +35,7 @@ export function SectorSection({
   lockedUnits,
   onMove,
   onStage,
+  onToggleLock,
 }: SectorSectionProps) {
   const sector = SECTORS_BY_ID[sectorId];
   const groups = groupByType(unitIds);
@@ -109,9 +111,10 @@ export function SectorSection({
       }`}
     >
       <div className="flex h-[30px] w-full items-center gap-[4px] pl-[9px]">
-        <p className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">
+        {/* A heading, so the rail can be navigated sector by sector. */}
+        <h3 className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">
           {sector.label}
-        </p>
+        </h3>
         <PriorityBadge priority={sector.priority} />
         <div className="h-px min-w-px flex-1" />
         {staged ? (
@@ -129,13 +132,11 @@ export function SectorSection({
             </p>
           </button>
         )}
-        <button
-          type="button"
-          aria-label={`Lock ${sector.label}`}
-          className="flex size-[26px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[3px] border border-text-secondary"
-        >
-          <img alt="" src={lockOpen} width={16} height={16} className="block" />
-        </button>
+        <SectorLockButton
+          sectorLabel={sector.label}
+          locked={unitIds.length > 0 && unitIds.every((id) => lockedUnits.includes(id))}
+          onToggle={() => onToggleLock(sectorId)}
+        />
       </div>
 
       <CoverageBar percent={percent} />

@@ -6,6 +6,7 @@ import { LiveRegion } from '../components/LiveRegion';
 import { MapLayer, type FannedGroupId } from '../components/MapLayer';
 import { Stage } from '../components/Stage';
 import { TaskingPanel } from '../components/TaskingPanel';
+import { scopeLabel } from '../components/RePropoPopover';
 import { TopBar } from '../components/TopBar';
 import { SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
 import {
@@ -37,6 +38,9 @@ export function Review() {
   const selectedSector = usePlanStore((state) => state.selectedSector);
   const moveUnit = usePlanStore((state) => state.moveUnit);
   const setStaged = usePlanStore((state) => state.setStaged);
+  const toggleSectorLock = usePlanStore((state) => state.toggleSectorLock);
+  const rePropose = usePlanStore((state) => state.rePropose);
+  const clearPlan = usePlanStore((state) => state.clearPlan);
   const reset = usePlanStore((state) => state.reset);
 
   const [fanned, setFanned] = useState<FannedGroupId | null>(null);
@@ -92,6 +96,35 @@ export function Review() {
     [setStaged],
   );
 
+  /*
+   * Both of these change the whole plan at once, which is exactly the kind of
+   * change a screen reader has to be told about: the rail it was just reading
+   * is now a different rail.
+   */
+  const handleRePropose = useCallback(
+    (scope: SectorId | 'all') => {
+      rePropose(scope);
+      setAnnouncement(
+        `Tasking re-proposed for ${scopeLabel(scope)}. Locked and operator-set units kept.`,
+      );
+    },
+    [rePropose],
+  );
+
+  const handleClearPlan = useCallback(() => {
+    clearPlan();
+    // Counted after the fact, because locked units keep their tasking and the
+    // operator should hear how many did.
+    const kept = usePlanStore.getState().lockedUnits.length;
+    setAnnouncement(
+      kept > 0
+        ? `Plan cleared. ${unassignedCount(usePlanStore.getState().assignments)} units back in the roster; ${kept} locked ${
+            kept === 1 ? 'unit keeps its' : 'units keep their'
+          } tasking.`
+        : 'Plan cleared. Every unit is back in the roster.',
+    );
+  }, [clearPlan]);
+
   const coverage = coverageBySector(assignments);
   const weakestSectorId = weakest(assignments);
   const unitsBySector = Object.fromEntries(
@@ -131,6 +164,9 @@ export function Review() {
         selectedSector={selectedSector}
         onMove={handleMove}
         onStage={handleStage}
+        onToggleLock={toggleSectorLock}
+        onRePropose={handleRePropose}
+        onClearPlan={handleClearPlan}
         onReviewAndLaunch={() => navigate('/review/launch')}
       />
 

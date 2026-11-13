@@ -85,12 +85,12 @@ export function LaunchSummary() {
         style={{ left: 9, top: 85, width: 1422, height: 896 }}
       >
         <header className="flex h-[61px] shrink-0 items-center gap-[12px] border-b border-border-subtle px-[21px]">
-          <h1
+          <h2
             id="launch-summary-title"
             className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase"
           >
             Review and launch
-          </h1>
+          </h2>
           <p className="text-[12px] whitespace-nowrap text-text-secondary">
             {launching} units · {stagedSectors.length} of {SECTOR_IDS.length} sectors · {MISSION_TIME}
           </p>
@@ -197,9 +197,10 @@ function SectorCard({
       }`}
     >
       <div className="flex h-[30px] w-full items-center gap-[8px] pl-[9px]">
-        <p className="shrink-0 text-[14px] font-semibold whitespace-nowrap text-text-primary">
+        {/* A heading, so the summary can be read sector by sector. */}
+        <h3 className="shrink-0 text-[14px] font-semibold whitespace-nowrap text-text-primary">
           {sector.label}
-        </p>
+        </h3>
         <PriorityBadge priority={sector.priority} />
         <p className="shrink-0 font-mono text-[12px] text-text-secondary">{percent}%</p>
         <div className="h-px min-w-px flex-1" />

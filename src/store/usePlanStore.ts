@@ -34,6 +34,15 @@ export interface PlanState {
   moveUnit: (unitId: string, toSector: SectorId) => void;
   selectSector: (sector: SectorId | null) => void;
   setStaged: (sector: SectorId, staged: boolean) => void;
+  /** Lock or unlock every unit in a sector against autonomy re-proposal. */
+  toggleSectorLock: (sector: SectorId) => void;
+  /**
+   * Hand the plan back to the autonomy, keeping what the operator owns.
+   * Scope is every sector, or one of them.
+   */
+  rePropose: (scope: SectorId | 'all') => void;
+  /** Take every unit off tasking. Re-proposing brings the plan back. */
+  clearPlan: () => void;
   /** Send up everything staged, and freeze what that was. */
   launch: () => void;
   reset: () => void;
@@ -88,13 +97,154 @@ export const usePlanStore = create<PlanState>((set) => ({
   setStaged: (sector, staged) =>
     set((state) => ({ staged: { ...state.staged, [sector]: staged } })),
 
+  /*
+   * A lock says the autonomy may not move these units when it re-proposes
+   * (`spec.md`: "Lock an asset or a sector, so the autonomy won't change it on
+   * re-propose"). It is not a lock against the operator: the whole point of
+   * the screen is that a person can always override, so dragging a locked unit
+   * still works and simply makes it theirs.
+   *
+   * The sector's button is all-or-nothing — it locks what is there now, and
+   * unlocks if everything already is.
+   */
+  toggleSectorLock: (sector) =>
+    set((state) => {
+      const units = unitsIn(state.assignments, sector);
+      if (units.length === 0) return state;
+
+      const allLocked = units.every((id) => state.lockedUnits.includes(id));
+      return {
+        lockedUnits: allLocked
+          ? state.lockedUnits.filter((id) => !units.includes(id))
+          : [...state.lockedUnits, ...units.filter((id) => !state.lockedUnits.includes(id))],
+      };
+    }),
+
+  /*
+   * Re-proposing asks the autonomy for its plan again. Two kinds of
+   * assignment survive it, which is what the popover lists under "Keeps": a
+   * locked unit, and a unit the operator placed themselves. Everything else in
+   * scope goes back to what the autonomy proposed.
+   *
+   * Every sector it touches returns to "Stage sector", because the plan the
+   * operator staged is not the plan any more.
+   */
+  rePropose: (scope) =>
+    set((state) => {
+      const inScope = (target: AssignmentTarget | undefined) =>
+        target !== undefined && (scope === 'all' || target === scope);
+
+      const assignments = { ...state.assignments };
+      const touched = new Set<SectorId>();
+
+      for (const proposed of PROPOSED_ASSIGNMENTS) {
+        const current = assignments[proposed.unitId];
+        if (!inScope(current?.target) && !inScope(proposed.target)) continue;
+        if (keptByOperator(state, proposed.unitId)) continue;
+
+        if (current?.target !== proposed.target) {
+          if (current && current.target !== 'ALL') touched.add(current.target);
+          if (proposed.target !== 'ALL') touched.add(proposed.target);
+        }
+        assignments[proposed.unitId] = { ...proposed };
+      }
+
+      const staged = { ...state.staged };
+      touched.forEach((sector) => {
+        staged[sector] = false;
+      });
+
+      return { assignments, staged };
+    }),
+
+  clearPlan: () =>
+    set((state) => {
+      // Locked units are the operator saying "not this one", which a clear
+      // has no more right to overrule than the autonomy does.
+      const assignments = Object.fromEntries(
+        Object.entries(state.assignments).filter(([unitId]) =>
+          state.lockedUnits.includes(unitId),
+        ),
+      ) as Assignments;
+
+      return {
+        assignments,
+        staged: Object.fromEntries(SECTOR_IDS.map((id) => [id, false])) as Record<
+          SectorId,
+          boolean
+        >,
+      };
+    }),
+
   launch: () =>
     set((state) => ({ launched: SECTOR_IDS.filter((id) => state.staged[id]) })),
 
   reset: () => set(initial()),
 }));
 
+/** A unit the autonomy may not re-task: locked, or placed by the operator. */
+const keptByOperator = (state: PlanState, unitId: string): boolean =>
+  state.lockedUnits.includes(unitId) || state.assignments[unitId]?.source === 'operator';
+
 /* ---------------------------------------------------------------- selectors */
+
+export interface KeptGroup {
+  unitIds: string[];
+  /** Frame copy: "locked" or "set by operator". */
+  reason: 'locked' | 'operator';
+}
+
+export interface RePropose {
+  /** What survives a re-propose, grouped by why (frame 160:694's "Keeps"). */
+  keeps: KeptGroup[];
+  /** How many assigned units the autonomy would be free to move. */
+  mayChange: number;
+  /** The sectors in scope, for the "across ..." line. */
+  sectors: SectorId[];
+}
+
+/**
+ * What a re-propose would keep and what it would change — the figures the
+ * popover shows before the operator commits to it. Derived from the same two
+ * rules `rePropose` applies, so the preview cannot promise one thing and the
+ * action do another.
+ */
+export function rePropoPreview(
+  assignments: Assignments,
+  lockedUnits: string[],
+  scope: SectorId | 'all',
+): RePropose {
+  const sectors = scope === 'all' ? [...SECTOR_IDS] : [scope];
+  const assigned = Object.values(assignments).filter(
+    (assignment) =>
+      scope === 'all' || assignment.target === scope,
+  );
+
+  const locked = assigned
+    .filter((assignment) => lockedUnits.includes(assignment.unitId))
+    .map((assignment) => assignment.unitId)
+    .sort(byUnitId);
+
+  // A unit that is both locked and operator-set is listed once, as locked:
+  // the lock is the stronger statement, and the list is meant to be read.
+  const operator = assigned
+    .filter(
+      (assignment) =>
+        assignment.source === 'operator' && !lockedUnits.includes(assignment.unitId),
+    )
+    .map((assignment) => assignment.unitId)
+    .sort(byUnitId);
+
+  const keeps: KeptGroup[] = [];
+  if (locked.length > 0) keeps.push({ unitIds: locked, reason: 'locked' });
+  if (operator.length > 0) keeps.push({ unitIds: operator, reason: 'operator' });
+
+  return {
+    keeps,
+    mayChange: assigned.length - locked.length - operator.length,
+    sectors,
+  };
+}
 /*
  * Pure functions over `assignments` rather than store selectors, so a
  * component can subscribe to the one stable reference and derive the rest.

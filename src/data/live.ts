@@ -39,14 +39,37 @@ export const SECTOR_PACE: Record<SectorId, number> = {
  */
 export const BEHIND_TOLERANCE = 15;
 
-/** The event feed before the incident, verbatim from frame 238:2144. */
-export const SCRIPTED_EVENTS: { minute: number; text: string }[] = [
+/**
+ * The event feed before the incident, verbatim from frame 238:2144.
+ *
+ * Each line carries what it is about as well as what it says, so selecting it
+ * can highlight the units and the sector involved — `spec.md`: "Selecting a
+ * feed event highlights the assets and sector involved."
+ */
+export const SCRIPTED_EVENTS: {
+  minute: number;
+  text: string;
+  units: string[];
+  sector: SectorId;
+}[] = [
   {
     minute: 12,
     text: 'HYD-14 moved from Sector D to Sector C: rooftop backlog near Folly Rd.',
+    units: ['HYD-14'],
+    sector: 'C',
   },
-  { minute: 20, text: 'ROC-03 finished its first wide pass of Sector C.' },
-  { minute: 28, text: 'KRK-01 rerouted around debris on Meeting St, Sector B streets.' },
+  {
+    minute: 20,
+    text: 'ROC-03 finished its first wide pass of Sector C.',
+    units: ['ROC-03'],
+    sector: 'C',
+  },
+  {
+    minute: 28,
+    text: 'KRK-01 rerouted around debris on Meeting St, Sector B streets.',
+    units: ['KRK-01'],
+    sector: 'B',
+  },
 ];
 
 const range = (prefix: string, from: number, to: number): string[] =>

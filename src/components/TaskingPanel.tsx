@@ -1,8 +1,11 @@
-import { PANEL } from '../data/mapGeometry';
+import { useState } from 'react';
+import { PANEL, RAIL_FOOTER_HEIGHT, RAIL_SCROLLBAR } from '../data/mapGeometry';
 import { SECTORS, COVERAGE_TARGET } from '../data/sectors';
 import { UNAVAILABLE_UNITS } from '../data/assets';
 import { formatUnitRange } from '../lib/units';
 import { SectorSection } from './SectorSection';
+import { RailScrollbar, useRailScroll } from './RailScrollbar';
+import { RePropoPopover } from './RePropoPopover';
 import { UnitRow } from './UnitRow';
 import type { Assignments } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
@@ -18,6 +21,9 @@ export interface TaskingPanelProps {
   selectedSector: SectorId | null;
   onMove: (unitId: string, toSector: SectorId) => void;
   onStage: (sectorId: SectorId) => void;
+  onToggleLock: (sectorId: SectorId) => void;
+  onRePropose: (scope: SectorId | 'all') => void;
+  onClearPlan: () => void;
   onReviewAndLaunch: () => void;
 }
 
@@ -32,8 +38,14 @@ export function TaskingPanel({
   selectedSector,
   onMove,
   onStage,
+  onToggleLock,
+  onRePropose,
+  onClearPlan,
   onReviewAndLaunch,
 }: TaskingPanelProps) {
+  const { ref, metrics } = useRailScroll<HTMLDivElement>();
+  const [reProposing, setReProposing] = useState(false);
+
   return (
     <>
       <div
@@ -45,12 +57,20 @@ export function TaskingPanel({
         className="absolute flex items-center gap-[4px] overflow-hidden rounded-tr-[8px] border-t border-r border-b border-border-subtle pr-[12px] pl-[14px]"
         style={{ left: PANEL.x, top: PANEL.y, width: PANEL.width, height: PANEL.titleHeight }}
       >
-        <h1 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
+        <h2 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
           Proposed tasking
-        </h1>
+        </h2>
         <div className="h-px min-w-px flex-1" />
+        {/*
+          * Clearing takes every unit off tasking, apart from the locked ones.
+          * There is no confirmation step: nothing has launched yet, and
+          * re-proposing puts the autonomy's plan straight back. **Flagged for
+          * design review** — no frame draws what the panel looks like
+          * afterwards, or says whether a clear should ask first.
+          */}
         <button
           type="button"
+          onClick={onClearPlan}
           className="flex shrink-0 cursor-pointer items-center overflow-hidden px-[10px] py-[6px]"
         >
           <span className="text-[12px] font-semibold whitespace-nowrap text-text-secondary">
@@ -59,7 +79,12 @@ export function TaskingPanel({
         </button>
         <button
           type="button"
-          className="flex h-[30px] w-[88px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[2px] border border-interaction-primary px-[10px] py-[3px]"
+          onClick={() => setReProposing((was) => !was)}
+          aria-expanded={reProposing}
+          aria-haspopup="dialog"
+          className={`flex h-[30px] w-[88px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[2px] border border-interaction-primary px-[10px] py-[3px] ${
+            reProposing ? 'bg-interaction-primary/15' : ''
+          }`}
         >
           <span className="text-[12px] font-semibold whitespace-nowrap text-interaction-primary">
             Re-propose
@@ -67,13 +92,23 @@ export function TaskingPanel({
         </button>
       </div>
 
+      {/*
+        * The list scrolls and the action does not.
+        *
+        * A sector card grows when it carries a warning, and the rail was
+        * clipping whatever that pushed past the fold — including, at the
+        * bottom, the one button that launches the plan. So the sectors take
+        * the space that is left and `REVIEW AND LAUNCH` keeps the foot of the
+        * rail, which is where the primary action sits on every screen.
+        */}
       <div
-        className="absolute flex flex-col items-start gap-[8px] overflow-hidden py-[8px] pr-[14px] pl-[4px]"
+        ref={ref}
+        className="absolute flex flex-col items-start gap-[8px] overflow-x-hidden overflow-y-auto py-[8px] pr-[14px] pl-[4px] [scrollbar-width:none]"
         style={{
           left: PANEL.x,
           top: PANEL.y + PANEL.titleHeight,
           width: PANEL.width,
-          height: PANEL.height - PANEL.titleHeight,
+          height: PANEL.height - PANEL.titleHeight - RAIL_FOOTER_HEIGHT,
         }}
       >
         <div className="flex w-full shrink-0 items-start overflow-hidden px-[12px] py-[2px]">
@@ -82,17 +117,20 @@ export function TaskingPanel({
           </p>
         </div>
 
-        <section className="flex w-full shrink-0 flex-col items-start gap-[2px] overflow-hidden rounded-[4px] px-[6px] pb-[2px]">
-          <div className="relative h-[26px] w-full">
-            <p className="absolute top-[5px] left-[9px] text-[14px] font-semibold whitespace-nowrap text-text-primary">
-              All sectors
-            </p>
-            <p className="absolute top-[6px] left-[219px] text-[12px] whitespace-nowrap text-text-secondary">
-              Relay over every sector
-            </p>
-          </div>
-          <UnitRow label={formatUnitRange(relayUnits)} type="GRF" showLockSlot={false} />
-        </section>
+        {/* Nothing on relay, nothing to say: a cleared plan has no comms row. */}
+        {relayUnits.length > 0 && (
+          <section className="flex w-full shrink-0 flex-col items-start gap-[2px] overflow-hidden rounded-[4px] px-[6px] pb-[2px]">
+            <div className="relative h-[26px] w-full">
+              <p className="absolute top-[5px] left-[9px] text-[14px] font-semibold whitespace-nowrap text-text-primary">
+                All sectors
+              </p>
+              <p className="absolute top-[6px] left-[219px] text-[12px] whitespace-nowrap text-text-secondary">
+                Relay over every sector
+              </p>
+            </div>
+            <UnitRow label={formatUnitRange(relayUnits)} type="GRF" showLockSlot={false} />
+          </section>
+        )}
 
         {SECTORS.map((sector) => (
           <SectorSection
@@ -107,6 +145,7 @@ export function TaskingPanel({
             lockedUnits={lockedUnits}
             onMove={onMove}
             onStage={onStage}
+            onToggleLock={onToggleLock}
           />
         ))}
 
@@ -126,6 +165,33 @@ export function TaskingPanel({
           />
         </section>
 
+        <div className="min-h-px w-full flex-1" />
+      </div>
+
+      <RailScrollbar metrics={metrics} style={RAIL_SCROLLBAR} />
+
+      {reProposing && (
+        <RePropoPopover
+          assignments={assignments}
+          lockedUnits={lockedUnits}
+          selectedSector={selectedSector}
+          onConfirm={(scope) => {
+            onRePropose(scope);
+            setReProposing(false);
+          }}
+          onCancel={() => setReProposing(false)}
+        />
+      )}
+
+      <div
+        className="absolute flex flex-col items-center overflow-hidden px-[10px] py-[4px]"
+        style={{
+          left: PANEL.x,
+          top: PANEL.y + PANEL.height - RAIL_FOOTER_HEIGHT,
+          width: PANEL.width,
+          height: RAIL_FOOTER_HEIGHT,
+        }}
+      >
         <div className="flex h-[44px] w-full shrink-0 flex-col items-center overflow-hidden px-[6px] py-[4px]">
           <button
             type="button"
@@ -136,13 +202,6 @@ export function TaskingPanel({
               REVIEW AND LAUNCH · {stagedCount} SECTORS
             </span>
           </button>
-        </div>
-
-        <div className="min-h-px w-full flex-1" />
-
-        <div className="absolute top-[24px] right-[4px] bottom-[54px] w-[4px]">
-          <div className="absolute top-0 left-0 h-[832px] w-[4px] rounded-[2px] bg-text-secondary opacity-15" />
-          <div className="absolute top-0 left-0 h-[599px] w-[4px] rounded-[2px] bg-text-secondary opacity-60" />
         </div>
       </div>
     </>
