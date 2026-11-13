@@ -52,3 +52,12 @@ export const PROPOSED_SELECTED_SECTOR: SectorId = 'D';
  * every screenshot identical.
  */
 export const MISSION_TIME = '08:41';
+
+/**
+ * The scripted clock readings on the Screen 1 status bar (frame 171:805).
+ * Fixed, like `MISSION_TIME`, so every run reads the same.
+ */
+export const MISSION_STATUS = {
+  sinceLandfall: '14 h',
+  weatherWindow: '6 h left',
+};

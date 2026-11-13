@@ -22,11 +22,20 @@ export interface PlanState {
   /** Units the autonomy may not move on re-propose. */
   lockedUnits: string[];
   selectedSector: SectorId | null;
+  /**
+   * The sectors that actually went up, captured at the moment of launch.
+   * `null` until the operator launches: Screen 3 has nothing to show before
+   * then, and the summary step can tell "not launched yet" from "launched
+   * nothing".
+   */
+  launched: SectorId[] | null;
 
   /** Move one unit to another sector and mark it set by the operator. */
   moveUnit: (unitId: string, toSector: SectorId) => void;
   selectSector: (sector: SectorId | null) => void;
   setStaged: (sector: SectorId, staged: boolean) => void;
+  /** Send up everything staged, and freeze what that was. */
+  launch: () => void;
   reset: () => void;
 }
 
@@ -37,6 +46,7 @@ const initial = () => ({
   staged: { ...PROPOSED_STAGED },
   lockedUnits: [...PROPOSED_LOCKED_UNITS],
   selectedSector: PROPOSED_SELECTED_SECTOR as SectorId | null,
+  launched: null as SectorId[] | null,
 });
 
 export const usePlanStore = create<PlanState>((set) => ({
@@ -77,6 +87,9 @@ export const usePlanStore = create<PlanState>((set) => ({
 
   setStaged: (sector, staged) =>
     set((state) => ({ staged: { ...state.staged, [sector]: staged } })),
+
+  launch: () =>
+    set((state) => ({ launched: SECTOR_IDS.filter((id) => state.staged[id]) })),
 
   reset: () => set(initial()),
 }));

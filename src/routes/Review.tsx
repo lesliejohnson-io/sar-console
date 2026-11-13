@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Legend } from '../components/Legend';
+import { RestartDemo } from '../components/RestartDemo';
 import { LiveRegion } from '../components/LiveRegion';
 import { MapLayer, type FannedGroupId } from '../components/MapLayer';
 import { Stage } from '../components/Stage';
@@ -28,12 +30,14 @@ import type { SectorId } from '../data/types';
  * opened on the map, and what was last announced.
  */
 export function Review() {
+  const navigate = useNavigate();
   const assignments = usePlanStore((state) => state.assignments);
   const staged = usePlanStore((state) => state.staged);
   const lockedUnits = usePlanStore((state) => state.lockedUnits);
   const selectedSector = usePlanStore((state) => state.selectedSector);
   const moveUnit = usePlanStore((state) => state.moveUnit);
   const setStaged = usePlanStore((state) => state.setStaged);
+  const reset = usePlanStore((state) => state.reset);
 
   const [fanned, setFanned] = useState<FannedGroupId | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -127,9 +131,16 @@ export function Review() {
         selectedSector={selectedSector}
         onMove={handleMove}
         onStage={handleStage}
+        onReviewAndLaunch={() => navigate('/review/launch')}
       />
 
       <Legend />
+      <RestartDemo
+        onRestart={() => {
+          reset();
+          navigate('/overview');
+        }}
+      />
       <LiveRegion message={announcement} />
     </Stage>
   );

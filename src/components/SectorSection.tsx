@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { SECTORS_BY_ID } from '../data/sectors';
-import { ONE_WAY_NOTE, REACH_WARNING_GLYPH, canOperatorMove } from '../data/reach';
 import { formatUnitRange, groupByType } from '../lib/units';
 import { CoverageBar } from './CoverageBar';
 import { InlineWarning } from './InlineWarning';
@@ -50,18 +49,6 @@ export function SectorSection({
   const reason = subject
     ? `${formatUnitRange(subject.unitIds)} ${sector.reason.suffix}`
     : undefined;
-
-  /*
-   * Units the autonomy put somewhere the operator may not send more of the
-   * same type. Without a word here the refusal elsewhere looks like a bug, so
-   * the row says what it cost to put them there — but the card shows it only
-   * when nothing else is already explaining the same units, so a sector never
-   * says two things at once about one group.
-   */
-  const oneWay = (ids: string[]) =>
-    !belowTarget && !canOperatorMove(ids[0], sectorId).ok;
-
-  const subjectIsOneWay = subject !== undefined && oneWay(subject.unitIds);
 
   const rowsFor = (type: AssetType, ids: string[], key: string, locked: boolean) => {
     const expanded = opened[key] ?? false;
@@ -157,7 +144,7 @@ export function SectorSection({
         * Below target the warning takes the reason line's place: it carries the
         * cause itself, so the sector does not say two things at once.
         */}
-      {reason && !belowTarget && !subjectIsOneWay && (
+      {reason && !belowTarget && (
         <div className="flex w-full items-start overflow-hidden px-[9px] pb-[2px]">
           <p className="min-w-px flex-1 text-[12px] text-text-secondary">{reason}</p>
         </div>
@@ -179,30 +166,15 @@ export function SectorSection({
           (id) => assignments[id].source === 'autonomy',
         );
 
-        const showOneWay = oneWay(group.unitIds);
-
         return (
           <div key={group.type} className="contents">
-            {autonomySet.length > 0 && (
-              <>
-                {rowsFor(
-                  group.type,
-                  autonomySet,
-                  `${group.type}-autonomy`,
-                  autonomySet.every((id) => lockedUnits.includes(id)),
-                )}
-                {showOneWay && (
-                  <div className="flex w-full items-start gap-[6px] px-[9px] pb-[2px]">
-                    <span aria-hidden className="text-[10px] text-status-needs-operator">
-                      {REACH_WARNING_GLYPH}
-                    </span>
-                    <p className="min-w-px flex-1 text-[12px] text-text-secondary">
-                      {ONE_WAY_NOTE}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+            {autonomySet.length > 0 &&
+              rowsFor(
+                group.type,
+                autonomySet,
+                `${group.type}-autonomy`,
+                autonomySet.every((id) => lockedUnits.includes(id)),
+              )}
             {operatorSet.length > 0 && (
               <OperatorSetGroup
                 note={operatorNote(assignments, operatorSet)}

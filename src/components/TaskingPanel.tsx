@@ -18,6 +18,7 @@ export interface TaskingPanelProps {
   selectedSector: SectorId | null;
   onMove: (unitId: string, toSector: SectorId) => void;
   onStage: (sectorId: SectorId) => void;
+  onReviewAndLaunch: () => void;
 }
 
 export function TaskingPanel({
@@ -31,6 +32,7 @@ export function TaskingPanel({
   selectedSector,
   onMove,
   onStage,
+  onReviewAndLaunch,
 }: TaskingPanelProps) {
   return (
     <>
@@ -127,6 +129,7 @@ export function TaskingPanel({
         <div className="flex h-[44px] w-full shrink-0 flex-col items-center overflow-hidden px-[6px] py-[4px]">
           <button
             type="button"
+            onClick={onReviewAndLaunch}
             className="flex h-[40px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[3px] bg-interaction-primary px-[8px] py-[4px]"
           >
             <span className="text-[14px] font-medium whitespace-nowrap text-text-on-interaction">

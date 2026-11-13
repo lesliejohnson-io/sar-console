@@ -28,6 +28,10 @@ export interface Unit {
   status: UnitStatus;
   /** Shown in the Unavailable section and on hover (Screen 1). */
   unavailableReason?: string;
+  /** The long form, in the hover tooltip: what is being done to it. */
+  unavailableDetail?: string;
+  /** "Expected back 22:00", the second line of that tooltip. */
+  expectedBack?: string;
 }
 
 export interface Assignment {

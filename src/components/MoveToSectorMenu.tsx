@@ -163,12 +163,20 @@ export function MoveToSectorMenu({
                   close();
                   onMove(unitId, id);
                 }}
-                className="flex w-full cursor-pointer items-center gap-[8px] px-[10px] py-[5px] text-left text-[12px] text-text-primary hover:bg-surface-app"
+                className="flex w-full cursor-pointer flex-col items-start px-[10px] py-[5px] text-left text-[12px] text-text-primary hover:bg-surface-app"
               >
-                <span className="min-w-px flex-1 truncate">{sector.label}</span>
-                <span className="shrink-0 font-mono text-text-secondary">
-                  {coverageAfterMove(assignments, unitId, id)}%
+                <span className="flex w-full items-center gap-[8px]">
+                  <span className="min-w-px flex-1 truncate">{sector.label}</span>
+                  <span className="shrink-0 font-mono text-text-secondary">
+                    {coverageAfterMove(assignments, unitId, id)}%
+                  </span>
                 </span>
+                {verdict.caution && (
+                  <span className="flex items-start gap-[6px] text-[11px] text-status-needs-operator">
+                    <span aria-hidden>{REACH_WARNING_GLYPH}</span>
+                    <span>{verdict.caution}</span>
+                  </span>
+                )}
               </button>
             );
           })}

@@ -1,14 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { canOperatorMove } from './reach';
+import { canOperatorMove, reachOf } from './reach';
 import { SECTOR_IDS } from './sectors';
-import type { SectorId } from './types';
+import type { AssetType, SectorId } from './types';
 
 const reasonFor = (unitId: string, sector: SectorId): string => {
   const verdict = canOperatorMove(unitId, sector);
   return verdict.ok ? '' : verdict.reason;
 };
 
-describe('reach · what the operator may move where', () => {
+const cautionFor = (unitId: string, sector: SectorId): string | undefined => {
+  const verdict = canOperatorMove(unitId, sector);
+  return verdict.ok ? verdict.caution : undefined;
+};
+
+describe('reach · what each type can work', () => {
+  it('puts Hydras in Sector D under Partial, in the words the card uses', () => {
+    expect(reachOf('HYD', 'D')).toEqual({
+      level: 'partial',
+      detail: 'NE edge only · 15 km limit',
+    });
+  });
+
+  it('gives Hydras full reach everywhere Staging A covers', () => {
+    for (const sector of ['A', 'B', 'C'] as SectorId[]) {
+      expect(reachOf('HYD', sector).level).toBe('full');
+    }
+  });
+
+  it('lets Rocs, Krakens and Griffins reach the whole area', () => {
+    for (const type of ['ROC', 'KRK', 'GRF'] as AssetType[]) {
+      for (const sector of SECTOR_IDS) {
+        expect(reachOf(type, sector).level).toBe('full');
+      }
+    }
+  });
+
+  it('gives every type and sector a reason the card can print', () => {
+    for (const type of ['ROC', 'HYD', 'KRK', 'GRF'] as AssetType[]) {
+      for (const sector of SECTOR_IDS) {
+        expect(reachOf(type, sector).detail.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('canOperatorMove · what the operator may move where', () => {
   it('refuses a Griffin from every search sector', () => {
     for (const sector of SECTOR_IDS) {
       expect(canOperatorMove('GRF-02', sector).ok).toBe(false);
@@ -16,22 +52,21 @@ describe('reach · what the operator may move where', () => {
     }
   });
 
-  it('refuses a Hydra into Sector D, and names the distance', () => {
-    expect(canOperatorMove('HYD-01', 'D').ok).toBe(false);
-    expect(reasonFor('HYD-01', 'D')).toBe(
-      "Hydras can't reach: 19–38 km from Staging A (max 15)",
-    );
+  it('allows a Hydra into Sector D, with the partial-reach caution', () => {
+    // Partial is not refusal. The operator is told what they are taking on —
+    // the NE edge is inside the 15 km limit — and left to decide.
+    expect(canOperatorMove('HYD-01', 'D').ok).toBe(true);
+    expect(cautionFor('HYD-01', 'D')).toBe('NE edge only · 15 km limit');
   });
 
-  it('allows a Hydra into every sector Staging A reaches', () => {
+  it('allows a Hydra into every sector Staging A fully reaches, with no caution', () => {
     for (const sector of ['A', 'B', 'C'] as SectorId[]) {
       expect(canOperatorMove('HYD-01', sector).ok).toBe(true);
+      expect(cautionFor('HYD-01', sector)).toBeUndefined();
     }
   });
 
-  it('lets a Hydra the autonomy already put in D be moved out of it', () => {
-    // Reach gates where a unit may be sent, never where it already is. The
-    // four Hydras in Sector D stay; the operator can still pull them back.
+  it('lets a Hydra the autonomy put in D be moved out of it', () => {
     for (const sector of ['A', 'B', 'C'] as SectorId[]) {
       expect(canOperatorMove('HYD-21', sector).ok).toBe(true);
     }

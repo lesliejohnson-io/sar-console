@@ -12,11 +12,8 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  MAP_PATCH,
-  MAP_RASTER,
   MARKER,
   MARKER_ROW,
-  OCEAN_LABEL,
   RELAY_LABEL_POS,
   RELAY_MARKER,
   SECTOR_LABEL_POS,
@@ -29,14 +26,14 @@ import {
 } from '../data/sectorPaths';
 import { SECTORS, SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
 import { UNITS_BY_ID } from '../data/assets';
-import { REACH_WARNING_GLYPH, canOperatorMove, type ReachVerdict } from '../data/reach';
+import { REACH_WARNING_GLYPH, canOperatorMove } from '../data/reach';
 import { groupByType } from '../lib/units';
 import { sectorCollision } from '../lib/collision';
 import { coverageAfterMove, type Assignments } from '../store/usePlanStore';
 import { FannedGroup } from './FannedGroup';
 import { GroupMarker } from './GroupMarker';
+import { MapBackdrop } from './MapBackdrop';
 import type { AssetType, AssignmentTarget, SectorId } from '../data/types';
-import raster from '../assets/map/raster.png';
 
 /** Which group the operator has opened, if any. */
 export interface FannedGroupId {
@@ -129,7 +126,8 @@ export function MapLayer({
       const verdict = canOperatorMove(String(active.id), sector);
       if (!verdict.ok) return `Over ${label(sector)}. ${verdict.reason}.`;
       if (assignments[active.id]?.target === sector) return `Over ${label(sector)}, where it is now.`;
-      return `Over ${label(sector)}. Coverage would be ${coverageAfterMove(
+      const caution = verdict.caution ? ` ${verdict.caution}.` : '';
+      return `Over ${label(sector)}.${caution} Coverage would be ${coverageAfterMove(
         assignments,
         String(active.id),
         sector,
@@ -146,7 +144,8 @@ export function MapLayer({
       if (from === sector) return `${unitId} stays in ${label(sector)}.`;
 
       const origin = from === 'ALL' ? 'relay' : `Sector ${from}`;
-      return `${unitId} moved from ${origin} to Sector ${sector}. Sector ${sector} coverage ${coverageAfterMove(
+      const caution = verdict.caution ? ` ${verdict.caution}.` : '';
+      return `${unitId} moved from ${origin} to Sector ${sector}.${caution} Sector ${sector} coverage ${coverageAfterMove(
         assignments,
         unitId,
         sector,
@@ -159,7 +158,7 @@ export function MapLayer({
   const stateOf = (sector: SectorId) => {
     if (!dragging) return { mode: 'idle' as const };
 
-    const verdict: ReachVerdict = canOperatorMove(dragging, sector);
+    const verdict = canOperatorMove(dragging, sector);
     const isSource = assignments[dragging]?.target === sector;
     const isOver = over === sector;
 
@@ -168,6 +167,7 @@ export function MapLayer({
     return {
       mode: 'target' as const,
       isOver,
+      caution: verdict.caution,
       preview: coverageAfterMove(assignments, dragging, sector),
     };
   };
@@ -187,36 +187,7 @@ export function MapLayer({
         style={{ width: STAGE.width, height: STAGE.height }}
         onClick={() => onFan(null)}
       >
-        <img
-          alt=""
-          src={raster}
-          className="pointer-events-none absolute max-w-none"
-          style={{
-            left: MAP_RASTER.x,
-            top: MAP_RASTER.y,
-            width: MAP_RASTER.width,
-            height: MAP_RASTER.height,
-          }}
-        />
-
-        {/* Covers the label baked into the raster, so it can be redrawn in the UI font. */}
-        <div
-          className="absolute bg-map-patch"
-          style={{
-            left: MAP_PATCH.x,
-            top: MAP_PATCH.y,
-            width: MAP_PATCH.width,
-            height: MAP_PATCH.height,
-          }}
-        />
-        <p
-          className="absolute -translate-x-1/2 text-center text-[11px] font-light text-text-secondary italic"
-          style={{ left: OCEAN_LABEL.x, top: OCEAN_LABEL.y }}
-        >
-          {OCEAN_LABEL.lines[0]}
-          <br />
-          {OCEAN_LABEL.lines[1]}
-        </p>
+        <MapBackdrop />
 
         {SECTOR_SHAPES.map((shape) => (
           <SectorShape
@@ -235,6 +206,7 @@ export function MapLayer({
           const selected = sector.id === selectedSector;
           const state = stateOf(sector.id);
           const preview = state.mode === 'target' && state.isOver ? state.preview : null;
+          const note = state.mode !== 'idle' && state.isOver ? reachNote(state) : undefined;
 
           return (
             <div key={sector.id}>
@@ -261,9 +233,7 @@ export function MapLayer({
                 )}
               </p>
 
-              {state.mode === 'refused' && state.isOver && (
-                <ReachTag x={position.x} y={position.y + 22} reason={state.reason} />
-              )}
+              {note && <ReachTag x={position.x} y={position.y + 22} reason={note} />}
             </div>
           );
         })}
@@ -330,6 +300,13 @@ export function MapLayer({
 
 const label = (sector: SectorId): string => SECTORS_BY_ID[sector].label;
 
+/** What the sector has to say about the unit over it, if anything. */
+const reachNote = (state: SectorState): string | undefined => {
+  if (state.mode === 'refused') return state.reason;
+  if (state.mode === 'target') return state.caution;
+  return undefined;
+};
+
 const isFanned = (
   fanned: FannedGroupId | null,
   target: AssignmentTarget,
@@ -339,14 +316,19 @@ const isFanned = (
 type SectorState =
   | { mode: 'idle' }
   | { mode: 'source'; isOver: boolean }
-  | { mode: 'target'; isOver: boolean; preview: number }
+  | { mode: 'target'; isOver: boolean; preview: number; caution?: string }
   | { mode: 'refused'; isOver: boolean; reason: string };
 
 /**
  * One sector outline, and the drop target it becomes while a unit is in the
  * air. Teal marks a sector the operator may drop into, because teal is the
- * operator's own colour; amber marks one that will refuse, and says so in
- * words next to the label rather than by colour alone.
+ * operator's own colour; amber marks one the operator should think about
+ * first, and says so in words next to the label rather than by colour alone.
+ *
+ * Amber comes in two strengths, told apart by the outline rather than by the
+ * colour: **dashed** refuses the drop, **solid** accepts it with a caution —
+ * a sector the type only partly reaches. The console never blocks the
+ * operator over a partial reach; it tells them what they are taking on.
  */
 function SectorShape({
   shape,
@@ -362,11 +344,12 @@ function SectorShape({
   const { setNodeRef } = useDroppable({ id: shape.id });
 
   const highlighted = state.mode === 'target' || state.mode === 'refused';
+  const cautioned = state.mode === 'target' && state.caution !== undefined;
   const strokeClass =
-    state.mode === 'target'
-      ? 'stroke-status-operator-set'
-      : state.mode === 'refused'
-        ? 'stroke-status-needs-operator'
+    state.mode === 'refused' || cautioned
+      ? 'stroke-status-needs-operator'
+      : state.mode === 'target'
+        ? 'stroke-status-operator-set'
         : selected
           ? 'stroke-text-primary'
           : 'stroke-map-zone-boundary';
@@ -423,7 +406,11 @@ function SectorShape({
   );
 }
 
-/** The reach warning, in the shape frame 179:1782 draws it. */
+/**
+ * The reach warning, in the shape frame 179:1782 draws it. It carries both a
+ * refusal and a caution: the words say which, so the amber is never the only
+ * thing telling them apart.
+ */
 function ReachTag({ x, y, reason }: { x: number; y: number; reason: string }) {
   return (
     <div
