@@ -189,7 +189,7 @@ export function SectorSection({
 }
 
 /** "Set by operator · moved from Sector B · 08:41" */
-function operatorNote(assignments: Assignments, unitIds: string[]): string {
+export function operatorNote(assignments: Assignments, unitIds: string[]): string {
   const assignment = assignments[unitIds[0]];
   const parts = ['Set by operator'];
   if (assignment.movedFrom) parts.push(`moved from Sector ${assignment.movedFrom}`);
@@ -197,8 +197,11 @@ function operatorNote(assignments: Assignments, unitIds: string[]): string {
   return parts.join(' · ');
 }
 
-/** An operator choice, marked with the teal bar and its own reason line. */
-function OperatorSetGroup({ rows, note }: { rows: React.ReactNode; note: string }) {
+/**
+ * An operator choice, marked with the teal bar and its own reason line. Shared
+ * with Screen 3: a unit the operator moved keeps saying so once it is flying.
+ */
+export function OperatorSetGroup({ rows, note }: { rows: React.ReactNode; note: string }) {
   return (
     <div className="relative flex w-full flex-col items-start">
       {rows}

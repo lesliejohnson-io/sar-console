@@ -34,15 +34,28 @@ const BADGE: Record<AssetType, { x: number; y: number }> = {
   GRF: { x: 33, y: 18 },
 };
 
-/** The glyph, badge and pill. Laid out in the marker's own 52 x 44 box. */
+/**
+ * The glyph, badge and pill. Laid out in the marker's own 52 x 44 box.
+ *
+ * The badge and the pill are both optional, because what a marker has to say
+ * depends on the screen. Screen 2 is a plan, so every marker is labelled and
+ * carries its state. Screen 3 is 36 units flying at once: labels stay off
+ * until a unit is an exception or the operator asks, and a badge shows only
+ * when the unit is not in the state the screen expects — the rule in the
+ * `note/Live map labels and badges` frame.
+ */
 export function MarkerFace({
   type,
   status,
   suffix,
+  showStatus = true,
+  showLabel = true,
 }: {
   type: AssetType;
   status: UnitStatus;
   suffix: string;
+  showStatus?: boolean;
+  showLabel?: boolean;
 }) {
   const glyph = GLYPH[type];
   const badge = BADGE[type];
@@ -57,13 +70,17 @@ export function MarkerFace({
         className={`absolute max-w-none ${type === 'KRK' ? 'drop-shadow-marker' : ''}`}
         style={{ left: glyph.x, top: glyph.y }}
       />
-      <div className="absolute" style={{ left: badge.x, top: badge.y }}>
-        <StateBadge status={status} size={8} />
-      </div>
-      <div className="absolute inset-x-0 bottom-0 flex h-[14px] items-center gap-[5px] rounded-[99px] bg-map-label-pill px-[5px] py-px font-mono text-[9px] whitespace-nowrap text-text-primary">
-        <p>{type} ·</p>
-        <p>{suffix}</p>
-      </div>
+      {showStatus && (
+        <div className="absolute" style={{ left: badge.x, top: badge.y }}>
+          <StateBadge status={status} size={8} />
+        </div>
+      )}
+      {showLabel && (
+        <div className="absolute inset-x-0 bottom-0 flex h-[14px] items-center gap-[5px] rounded-[99px] bg-map-label-pill px-[5px] py-px font-mono text-[9px] whitespace-nowrap text-text-primary">
+          <p>{type} ·</p>
+          <p>{suffix}</p>
+        </div>
+      )}
     </>
   );
 }
@@ -82,6 +99,10 @@ export interface GroupMarkerProps {
   onExpand?: () => void;
   expanded?: boolean;
   label?: string;
+  showStatus?: boolean;
+  showLabel?: boolean;
+  /** Dimmed when the position is no longer current (out of contact). */
+  opacity?: number;
 }
 
 export function GroupMarker({
@@ -93,15 +114,28 @@ export function GroupMarker({
   onExpand,
   expanded = false,
   label,
+  showStatus = true,
+  showLabel = true,
+  opacity,
 }: GroupMarkerProps) {
   const count = unitIds.length;
-  const suffix = count === 1 ? padded(unitIds[0]) : `x${count}`;
-  const position = { left: x, top: y, width: MARKER.width, height: MARKER.height };
+  const suffix = count === 1 ? padded(unitIds[0]) : `×${count}`;
+  const position = { left: x, top: y, width: MARKER.width, height: MARKER.height, opacity };
+  const face = (
+    <MarkerFace
+      type={type}
+      status={status}
+      suffix={suffix}
+      showStatus={showStatus}
+      showLabel={showLabel}
+    />
+  );
 
   if (!onExpand) {
     return (
-      <div className="absolute" style={position}>
-        <MarkerFace type={type} status={status} suffix={suffix} />
+      <div className="absolute" style={position} aria-hidden={!label || undefined}>
+        {label && <span className="sr-only">{label}</span>}
+        {face}
       </div>
     );
   }
@@ -123,7 +157,7 @@ export function GroupMarker({
         onExpand();
       }}
     >
-      <MarkerFace type={type} status={status} suffix={suffix} />
+      {face}
     </button>
   );
 }

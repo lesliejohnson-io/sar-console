@@ -1,119 +1,398 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { EventFeed } from '../components/EventFeed';
+import { IncidentCard } from '../components/IncidentCard';
 import { Legend } from '../components/Legend';
+import { LiveFlagCard } from '../components/LiveFlagCard';
+import { LiveMapLayer } from '../components/LiveMapLayer';
+import { LiveRegion } from '../components/LiveRegion';
+import { LiveTopBar } from '../components/LiveTopBar';
 import { RestartDemo } from '../components/RestartDemo';
+import { SectorStatusPanel } from '../components/SectorStatusPanel';
 import { Stage } from '../components/Stage';
-import { TopBar } from '../components/TopBar';
-import { SECTORS_BY_ID } from '../data/sectors';
-import { formatUnitRange, groupByType } from '../lib/units';
+import { BEHIND_TOLERANCE, INCIDENT, MINUTE_MS } from '../data/live';
+import { SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
+import { coverage } from '../lib/coverage';
+import { formatUnitRange, unitType } from '../lib/units';
 import {
-  availableCount,
-  coverageBySector,
-  overall,
-  unassignedCount,
-  unitsIn,
-  usePlanStore,
-  weakest,
-} from '../store/usePlanStore';
+  clock,
+  feed,
+  furthestBehind,
+  incidentPhase,
+  liveBySector,
+  outOfContact,
+  sinceIncident,
+  untilResolved,
+  useLiveStore,
+} from '../store/useLiveStore';
+import { availableCount, unitsIn, usePlanStore } from '../store/usePlanStore';
+import type { SectorId } from '../data/types';
 
 /**
- * Screen 3 · Tasking live, at `/live`.
+ * Screen 3 · Tasking live, at `/live` (frames 238:2144 and 289:2394).
  *
- * **A placeholder.** Milestone 4 builds the real thing: coverage filling on a
- * timer, the event feed, and the relay-loss incident. For now it says what
- * went up, so the launch can be seen to have carried the plan through — and
- * so the end of the flow is not a blank page.
+ * The plan is up and the operator is watching it work. Everything on the
+ * screen is derived from two pieces of state — the plan that launched, which
+ * never changes again, and the minute the mission is in — so the bars, the
+ * map, the feed and the top bar can never drift apart from each other.
+ *
+ * `/live?at=incident` opens two minutes into the relay loss, which is the
+ * moment frame 289:2394 draws.
  */
 export function Live() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const atIncident = params.get('at') === 'incident';
+
   const assignments = usePlanStore((state) => state.assignments);
   const launched = usePlanStore((state) => state.launched);
-  const reset = usePlanStore((state) => state.reset);
+  const selectedSector = usePlanStore((state) => state.selectedSector);
+  const resetPlan = usePlanStore((state) => state.reset);
 
-  const coverage = coverageBySector(assignments);
-  const relayUnits = unitsIn(assignments, 'ALL');
+  const live = useLiveStore();
+  const [announcement, setAnnouncement] = useState('');
+  const incidentRef = useRef<HTMLDivElement>(null);
 
-  return (
-    <Stage>
-      <div className="absolute inset-0 bg-surface-app" />
+  /*
+   * The mission clock. One mission minute per tick, stopping at the end of the
+   * two-hour window the plan was drawn for. The interval is cleared on every
+   * change of pace, so a jump to the incident never leaves a second clock
+   * running behind it.
+   */
+  const running = live.running;
+  const advance = live.advance;
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(advance, MINUTE_MS);
+    return () => window.clearInterval(timer);
+  }, [running, advance]);
 
-      <TopBar
-        overall={overall(assignments)}
-        weakest={weakest(assignments)}
-        weakestPercent={coverage[weakest(assignments)]}
-        unassigned={unassignedCount(assignments)}
-        available={availableCount()}
-      />
+  // Deep link: open at the minute the incident frame draws, not at the moment
+  // the link drops, so the card reads "2 min ago" as the frame does.
+  const jumpTo = live.jumpTo;
+  useEffect(() => {
+    if (atIncident) jumpTo(INCIDENT.atMinute + 2);
+  }, [atIncident, jumpTo]);
 
-      <section
-        aria-labelledby="live-title"
-        className="absolute flex flex-col gap-[16px] overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel p-[21px] shadow-panel"
-        style={{ left: 9, top: 85, width: 1422, height: 896 }}
-      >
-        <div className="flex items-baseline gap-[12px]">
+  /*
+   * `/live?at=incident` is a way into the middle of the story, so it brings
+   * its own plan: the proposed tasking with the move the demo is about, sent
+   * up. Opening `/live` on its own still says that nothing is flying — the
+   * console should never pretend a plan launched that the operator never saw.
+   */
+  const moveUnit = usePlanStore((state) => state.moveUnit);
+  const setStaged = usePlanStore((state) => state.setStaged);
+  const launchPlan = usePlanStore((state) => state.launch);
+  useEffect(() => {
+    if (!atIncident || usePlanStore.getState().launched !== null) return;
+    moveUnit('KRK-03', 'D');
+    moveUnit('KRK-04', 'D');
+    SECTOR_IDS.forEach((id) => setStaged(id, true));
+    launchPlan();
+  }, [atIncident, moveUnit, setStaged, launchPlan]);
+
+  const phase = incidentPhase(live);
+  const unresolved = phase === 'deciding' || phase === 'in-progress';
+
+  /* Nothing launched: there is no mission to watch. */
+  if (launched === null) {
+    return (
+      <Stage>
+        <div className="absolute inset-0 bg-surface-app" />
+        <LiveTopBar
+          minute={0}
+          worst={null}
+          incidentOpen={false}
+          inContact={availableCount()}
+          available={availableCount()}
+        />
+        <section
+          aria-labelledby="live-title"
+          className="absolute flex flex-col gap-[8px] rounded-[10px] border border-border-subtle bg-surface-panel p-[21px] shadow-panel"
+          style={{ left: 9, top: 85, width: 460 }}
+        >
+          {/* No Figma frame for this state — copy proposed, flagged for review. */}
           <h1
             id="live-title"
             className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase"
           >
-            Tasking live
+            Nothing is flying
           </h1>
           <p className="text-[12px] text-text-secondary">
-            Placeholder · Milestone 4 builds coverage filling, the event feed and the
-            relay-loss incident.
+            This screen follows a plan that has launched. Review the proposed tasking and
+            send it up first.
           </p>
-        </div>
+          <button
+            type="button"
+            onClick={() => navigate('/review')}
+            className="mt-[4px] flex h-[40px] w-full cursor-pointer items-center justify-center rounded-[3px] bg-interaction-primary text-[14px] font-medium text-text-on-interaction"
+          >
+            BACK TO THE PLAN
+          </button>
+        </section>
+        <Legend />
+        <RestartDemo
+          onRestart={() => {
+            resetPlan();
+            live.reset();
+            navigate('/overview');
+          }}
+        />
+      </Stage>
+    );
+  }
 
-        {launched === null ? (
-          <p className="text-[12px] text-text-secondary">
-            Nothing has launched yet.{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/review')}
-              className="cursor-pointer text-interaction-primary underline"
-            >
-              Back to the plan
-            </button>
-          </p>
-        ) : (
-          <div className="flex flex-col items-start gap-[8px]">
-            <article className="flex w-[640px] flex-col items-start gap-[2px] rounded-[6px] border border-border-subtle bg-surface-card px-[15px] py-[10px]">
-              <p className="text-[14px] font-semibold text-text-primary">All sectors</p>
-              <p className="text-[12px] text-text-secondary">
-                {formatUnitRange(relayUnits)} · relay over every sector
-              </p>
-            </article>
+  const unitsBySector = Object.fromEntries(
+    SECTOR_IDS.map((id) => [id, launched.includes(id) ? unitsIn(assignments, id) : []]),
+  ) as Record<SectorId, string[]>;
+  const relayUnits = unitsIn(assignments, 'ALL');
 
-            {launched.map((sectorId) => (
-              <article
-                key={sectorId}
-                className="flex w-[640px] flex-col items-start gap-[2px] rounded-[6px] border border-border-subtle bg-surface-card px-[15px] py-[10px]"
-              >
-                <div className="flex w-full items-baseline gap-[8px]">
-                  <p className="text-[14px] font-semibold text-text-primary">
-                    {SECTORS_BY_ID[sectorId].label}
-                  </p>
-                  <div className="h-px min-w-px flex-1" />
-                  <p className="font-mono text-[12px] text-text-secondary">
-                    {coverage[sectorId]}% expected
-                  </p>
-                </div>
-                <p className="text-[12px] text-text-secondary">
-                  {groupByType(unitsIn(assignments, sectorId))
-                    .map((group) => formatUnitRange(group.unitIds))
-                    .join(' · ')}
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+  /*
+   * The incident is scripted against a plan that launched Sector B with its
+   * seven Hydras. If the operator sent up something else, the relay loss has
+   * nothing to happen to, and the console says nothing rather than reporting
+   * a failure of units that never left the ground.
+   */
+  const incidentApplies =
+    launched.includes(INCIDENT.sector) &&
+    INCIDENT.affectedUnits.every((id) => unitsBySector[INCIDENT.sector].includes(id));
+
+  const bySector = liveBySector(live, unitsBySector);
+  const lost = incidentApplies ? outOfContact(live) : [];
+  const since = sinceIncident(live);
+  const until = untilResolved(live);
+
+  // The incident's impact, straight from the coverage model: what Sector B was
+  // expected to reach, and what the units still in contact give on their own.
+  const incidentUnits = unitsBySector[INCIDENT.sector];
+  const before = coverage(INCIDENT.sector, incidentUnits.map(unitType));
+  const after = coverage(
+    INCIDENT.sector,
+    incidentUnits.filter((id) => !INCIDENT.affectedUnits.includes(id)).map(unitType),
+  );
+
+  const flags: Partial<Record<SectorId, ReactNode>> = {};
+
+  const incidentOpen = unresolved && incidentApplies;
+
+  if (incidentOpen) {
+    flags[INCIDENT.sector] = (
+      <LiveFlagCard
+        title={INCIDENT.title}
+        body={`${formatUnitRange(INCIDENT.affectedUnits)} ${INCIDENT.effect}. Expected coverage ${before}% → ${after}%.`}
+        primary={{
+          label: 'See options',
+          onClick: () => {
+            if (live.feedHidden) live.toggleFeed();
+            requestAnimationFrame(() => incidentRef.current?.focus({ preventScroll: true }));
+          },
+        }}
+        secondary={{
+          label: `Pause Sector ${INCIDENT.sector}`,
+          onClick: () => live.pauseSector(INCIDENT.sector),
+        }}
+      />
+    );
+  }
+
+  /*
+   * Option b is two things: the Hydras come back, and Sector B is re-proposed.
+   * The second half is the operator's to do, so once the units are at staging
+   * the sector asks for it directly. Waiting for the behind-plan rule to ask
+   * would not do — the sector reads as on plan for the best part of an hour
+   * after losing seven of its ten units, because the plan tick it is measured
+   * against falls behind at the same time.
+   *
+   * **Flagged for design review:** no frame draws this card. The copy below is
+   * proposed, built from the incident card's own wording for the option.
+   */
+  if (
+    incidentApplies &&
+    live.resolution === 'b' &&
+    phase === 'resolved' &&
+    !flags[INCIDENT.sector]
+  ) {
+    flags[INCIDENT.sector] = (
+      <LiveFlagCard
+        title={`${formatUnitRange(INCIDENT.affectedUnits)} at staging · Sector ${INCIDENT.sector} needs new tasking`}
+        body={`Returned to staging after the ${INCIDENT.relayUnit} relay loss. ${
+          unitsBySector[INCIDENT.sector].length - INCIDENT.affectedUnits.length
+        } of ${unitsBySector[INCIDENT.sector].length} units still on task.`}
+        primary={{
+          label: `Re-propose Sector ${INCIDENT.sector}`,
+          onClick: () => navigate('/review'),
+        }}
+        secondary={{ label: 'Keep current plan', onClick: () => {} }}
+      />
+    );
+  }
+
+  /*
+   * A sector more than the tolerance behind its plan asks to be re-proposed,
+   * which is the spec's rule. An open incident takes the card instead: the
+   * operator is already being asked about the cause, and asking twice about
+   * the same thing in the same card is how a console gets ignored.
+   */
+  for (const sectorId of SECTOR_IDS) {
+    const state = bySector[sectorId];
+    if (flags[sectorId] || !state.flagged || !launched.includes(sectorId)) continue;
+
+    const idle = state.stopped;
+    const sector = SECTORS_BY_ID[sectorId];
+    flags[sectorId] = (
+      <LiveFlagCard
+        title={`${state.behind} pts behind plan (${state.planned}% expected by now)`}
+        body={
+          idle.length > 0
+            ? `${formatUnitRange(idle)} not searching. ${
+                unitsBySector[sectorId].length - idle.length
+              } of ${unitsBySector[sectorId].length} units still on task.`
+            : sector.lowCoverageCause
+        }
+        primary={{
+          label: `Re-propose Sector ${sectorId}`,
+          onClick: () => navigate('/review'),
+        }}
+        secondary={{ label: 'Keep current plan', onClick: () => {} }}
+      />
+    );
+  }
+
+  const worst = furthestBehind(bySector);
+  const inContact = availableCount() - lost.length;
+
+  return (
+    <Stage>
+      <LiveMapLayer
+        unitsBySector={unitsBySector}
+        relayUnits={relayUnits}
+        live={bySector}
+        outOfContact={lost}
+        incidentOpen={incidentOpen}
+        relayDown={incidentApplies && phase !== 'none'}
+        since={since}
+        movingRelay={
+          live.resolution === 'a' && live.resolvedFrom !== null
+            ? {
+                unitId: INCIDENT.options[0].moveUnit!,
+                progress: 1 - until / INCIDENT.options[0].minutes,
+              }
+            : null
+        }
+        returnedToStaging={
+          live.resolution === 'b' && phase === 'resolved' ? INCIDENT.affectedUnits : []
+        }
+        selectedSector={selectedSector}
+      />
+
+      <LiveTopBar
+        minute={live.minute}
+        worst={worst}
+        incidentOpen={incidentOpen}
+        inContact={inContact}
+        available={availableCount()}
+      />
+
+      <SectorStatusPanel
+        assignments={assignments}
+        unitsBySector={unitsBySector}
+        relayUnits={relayUnits}
+        live={bySector}
+        outOfContact={lost}
+        flags={flags}
+        holding={live.heldAllAt !== null}
+        onToggleHold={live.toggleHoldAll}
+      />
+
+      <EventFeed
+        entries={feed(live)}
+        hidden={live.feedHidden}
+        onToggle={live.toggleFeed}
+        incident={
+          incidentOpen ? (
+            <div ref={incidentRef} tabIndex={-1} className="w-full">
+              <IncidentCard
+                phase={phase}
+                at={clock(INCIDENT.atMinute)}
+                since={since}
+                until={until}
+                resolution={live.resolution}
+                chosenAt={live.resolvedFrom === null ? null : clock(live.resolvedFrom)}
+                before={before}
+                after={after}
+                effectsOpen={live.effectsOpen}
+                onToggleEffects={live.toggleEffects}
+                onChoose={live.choose}
+                onPauseSector={() => live.pauseSector(INCIDENT.sector)}
+                sectorPaused={bySector[INCIDENT.sector].paused}
+              />
+            </div>
+          ) : undefined
+        }
+      />
 
       <Legend />
       <RestartDemo
         onRestart={() => {
-          reset();
+          resetPlan();
+          live.reset();
           navigate('/overview');
         }}
       />
+      <LiveRegion message={announcement} />
+      <Announcer
+        phase={phase}
+        before={before}
+        after={after}
+        worst={worst}
+        onSay={setAnnouncement}
+      />
     </Stage>
   );
+}
+
+/**
+ * What a screen reader is told, and when.
+ *
+ * Only two things on this screen are worth interrupting for: a link going
+ * down, and the decision about it taking effect. Coverage climbing a point is
+ * not news, and announcing it every few seconds would bury the one sentence
+ * that matters.
+ */
+function Announcer({
+  phase,
+  before,
+  after,
+  worst,
+  onSay,
+}: {
+  phase: string;
+  before: number;
+  after: number;
+  worst: { sector: SectorId; behind: number; flagged: boolean };
+  onSay: (message: string) => void;
+}) {
+  const said = useRef<string>('');
+
+  useEffect(() => {
+    const say = (message: string) => {
+      if (said.current === message) return;
+      said.current = message;
+      onSay(message);
+    };
+
+    if (phase === 'deciding') {
+      say(
+        `${INCIDENT.title}. ${formatUnitRange(INCIDENT.affectedUnits)} out of contact. Sector ${INCIDENT.sector} expected coverage ${before}% down to ${after}%. Two options in the event feed.`,
+      );
+    } else if (phase === 'resolved') {
+      say(`${INCIDENT.title} resolved.`);
+    } else if (worst.flagged) {
+      say(
+        `Sector ${worst.sector} is ${worst.behind} points behind plan, past the ${BEHIND_TOLERANCE} point tolerance.`,
+      );
+    }
+  }, [phase, before, after, worst.flagged, worst.sector, worst.behind, onSay]);
+
+  return null;
 }

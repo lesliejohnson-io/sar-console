@@ -18,6 +18,7 @@ export function UnitRow({
   dimmed = false,
   taskOverride,
   detailOverride,
+  detailFlagged = false,
   showLockSlot = true,
   expandable = false,
   expanded = false,
@@ -31,6 +32,8 @@ export function UnitRow({
   dimmed?: boolean;
   taskOverride?: string;
   detailOverride?: string;
+  /** Amber: this row's condition is the one that changed (Screen 3). */
+  detailFlagged?: boolean;
   showLockSlot?: boolean;
   expandable?: boolean;
   expanded?: boolean;
@@ -81,7 +84,11 @@ export function UnitRow({
       <p className="h-[21px] w-[96px] shrink-0 content-center text-[12px] text-text-primary">
         {taskOverride ?? copy.task}
       </p>
-      <p className="h-[16px] min-w-px flex-1 truncate text-[12px] text-text-secondary">
+      <p
+        className={`h-[16px] min-w-px flex-1 truncate text-[12px] ${
+          detailFlagged ? 'text-status-needs-operator' : 'text-text-secondary'
+        }`}
+      >
         {detailOverride ?? copy.detail}
       </p>
 

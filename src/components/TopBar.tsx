@@ -10,7 +10,20 @@ import type { SectorId } from '../data/types';
  * changes between them is only which figures the row holds and where the row
  * begins — Screen 1's three readings start further right than Screen 2's.
  */
-export function TopBarChrome({ statX, children }: { statX: number; children: ReactNode }) {
+export function TopBarChrome({
+  statX,
+  statRight,
+  children,
+}: {
+  statX?: number;
+  /**
+   * Anchors the row by its right edge instead. Screen 3's readings change
+   * width as the mission goes — "Behind plan" becomes "Incident" — and in
+   * every frame the row ends against the same edge of the bar.
+   */
+  statRight?: number;
+  children: ReactNode;
+}) {
   return (
     <>
       <div
@@ -27,7 +40,7 @@ export function TopBarChrome({ statX, children }: { statX: number; children: Rea
 
       <div
         className="absolute flex items-center gap-[14px] overflow-hidden rounded-tl-[8px] px-[12px] py-[10px]"
-        style={{ left: statX, top: STAT_BAR.y, height: STAT_BAR.height }}
+        style={{ left: statX, right: statRight, top: STAT_BAR.y, height: STAT_BAR.height }}
       >
         {children}
       </div>

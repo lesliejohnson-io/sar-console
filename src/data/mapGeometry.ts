@@ -121,3 +121,23 @@ export const ROSTER = {
   /** The empty state's "Draw at least one sector…" line, above the button. */
   hint: { y: 872 },
 };
+
+/* ------------------------------------------- Screen 3 · Tasking live */
+/*
+ * Frames 238:2144 and 289:2394. The stat bar is anchored by its right edge
+ * rather than its left: the live readings are wider than Screen 2's and
+ * narrower than the incident's, and in all three frames the row ends against
+ * the same edge of the top bar.
+ */
+
+export const LIVE_STAT_BAR = { right: STAGE.width - (TOP_BAR.x + TOP_BAR.width) };
+
+/**
+ * The event feed. Anchored by its bottom edge, just above the legend, so it
+ * grows upward as the incident card opens inside it — which is what the two
+ * frames draw (top 809 without the card, 612 with it, the same bottom).
+ */
+export const LIVE_FEED = { x: 580, width: 459, bottom: STAGE.height - 974 };
+
+/** How much brighter searched ground is than the sector's own wash. */
+export const SEARCHED_FILL_OPACITY = 0.34;
