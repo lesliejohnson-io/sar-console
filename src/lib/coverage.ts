@@ -16,9 +16,9 @@ import type { AssetType, SectorId } from '../data/types';
  * Griffins fly comms relay and contribute no search coverage.
  */
 export const CONTRIBUTION: Record<AssetType, Record<SectorId, number>> = {
-  ROC: { A: 0.35, B: 0.3, C: 0.4, D: 0.25 },
-  HYD: { A: 0.3, B: 0.13, C: 0.2, D: 0.07 },
-  KRK: { A: 0.15, B: 0.2, C: 0.3, D: 0.43 },
+  ROC: { A: 0.35, B: 0.26, C: 0.4, D: 0.25 },
+  HYD: { A: 0.3, B: 0.14, C: 0.2, D: 0.07 },
+  KRK: { A: 0.15, B: 0.195, C: 0.3, D: 0.43 },
   GRF: { A: 0, B: 0, C: 0, D: 0 },
 };
 

@@ -39,6 +39,17 @@ describe('coverage model calibration', () => {
     expect(coverage('B', MOVED.B)).toBe(83);
   });
 
+  /*
+   * The relay-loss impact on Screen 3: GRF-02 drops and HYD-07 to HYD-13 go out
+   * of contact, leaving Sector B with ROC-02 and KRK-01 to KRK-02 alone. The
+   * incident card never writes 52% down — it reads it from here — so this is
+   * what keeps the card honest.
+   */
+  it('B · ROC + 2 KRK, no Hydras = 52 (the relay-loss impact: 83% -> 52%)', () => {
+    expect(coverage('B', ['ROC', 'KRK', 'KRK'])).toBe(52);
+    expect(coverage('B', MOVED.B) - coverage('B', ['ROC', 'KRK', 'KRK'])).toBe(31);
+  });
+
   it('C · ROC + 7 HYD = 87', () => {
     expect(coverage('C', OPEN.C)).toBe(87);
   });

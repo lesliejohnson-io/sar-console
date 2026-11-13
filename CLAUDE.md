@@ -35,11 +35,12 @@ File key: `aPOBeiNYhyyliwomVwpdiz` (Mixed-asset Territory Mapping). Use the Figm
 | Screen 2 · v5 · re-propose popover | `160:694` |
 | Screen 2 · v5 · edge: low-coverage warning | `263:5894` |
 | Screen 3 · v3 (tasking live, teal palette) | `238:2144` |
+| Screen 3 · v3 · incident: relay link lost (draft, deciding state) | `289:2394` |
 | Components page | `0:1` (main frame `1:2`) |
 
 Design notes sit beside the frames as `note/...` frames on page `118:1271`. Read them; they explain decisions (roster grouping, color rule on the live map, label rules).
 
-**No Figma frame exists yet for:** the expanded unit group and drag state, the "Move to sector" menu, the review-and-launch summary step, and the relay-loss incident card. Build these from existing components and the spec, and flag each one for design review.
+**No Figma frame exists yet for:** the expanded unit group and drag state, the "Move to sector" menu, the review-and-launch summary step, and the incident card's in-progress and resolved states (the deciding state is frame `289:2394`). Build these from existing components and the spec, and flag each one for design review.
 
 ### Tokens (Figma variables)
 
@@ -101,12 +102,12 @@ Every assignment carries its own reason and a `source` of `autonomy` or `operato
 
 ## Relay-loss incident (Screen 3, scripted)
 
-This replaces the version in the spec PDF, which used different unit and sector numbers. One incident card instead of separate alerts.
+`spec.md` carries this same version; the original PDF used different unit and sector numbers. One incident card instead of separate alerts.
 
 - **Trigger:** GRF-02, on station over Sector B, loses its link. HYD-07 to HYD-13, which relay through it, go out of contact and hold at their last positions.
 - **Root cause first:** "GRF-02 relay link lost", pinned to the top of the event feed.
 - **Grouped effects:** HYD-07 to HYD-13 out of contact, holding. Collapsed under the root cause, expandable.
-- **Impact:** Sector B's expected coverage drops from 83% to the value the coverage model gives for ROC-02 + KRK-01–02 alone. Compute it; do not hard-code it.
+- **Impact:** Sector B's expected coverage drops from 83% to 52%, the value the coverage model gives for ROC-02 + KRK-01–02 alone. Compute it; do not hard-code it.
 - **Options, side by side, no default selected:**
   - a. Move GRF-03 from Sector C to cover Sector B. Restores contact in about 6 minutes, but leaves Sector C's relay thin.
   - b. Return HYD-07 to HYD-13 to staging and re-propose tasking for Sector B.
@@ -124,6 +125,7 @@ Calibrate `c` so these hold, and lock them with Vitest:
 - A (ROC-01 + 6 HYD) = 92
 - B (ROC-02 + 7 HYD + 4 KRK) = 89
 - B (ROC-02 + 7 HYD + 2 KRK) = 83
+- B (ROC-02 + 2 KRK, no Hydras) = 52 (the relay-loss impact: 83% → 52%)
 - Overall at open = 78; overall after both Krakens move = 86
 - C (ROC-03 + 7 HYD) = 87
 - D (ROC-04 + 4 HYD) = 44
