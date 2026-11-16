@@ -8,6 +8,9 @@ export interface ScrollMetrics {
 
 const EMPTY: ScrollMetrics = { scrollTop: 0, scrollHeight: 0, clientHeight: 0 };
 
+/** The shortest the thumb gets, as a fraction of the track. */
+const MIN_THUMB = 0.08;
+
 /**
  * Measures a scrolling element so something else can draw its scrollbar.
  *
@@ -66,7 +69,7 @@ export function RailScrollbar({
   style,
 }: {
   metrics: ScrollMetrics;
-  /** Where the track sits, in stage coordinates. */
+  /** Where the track sits: stage coordinates, or insets within the rail. */
   style: CSSProperties;
 }) {
   const { scrollTop, scrollHeight, clientHeight } = metrics;
@@ -74,17 +77,20 @@ export function RailScrollbar({
   // A rail that fits has no bar at all, rather than a thumb filling the track.
   if (clientHeight === 0 || scrollHeight <= clientHeight + 1) return null;
 
-  const trackHeight = Number(style.height ?? 0);
-  const thumbHeight = Math.max(24, trackHeight * (clientHeight / scrollHeight));
-  const offset =
-    (trackHeight - thumbHeight) * (scrollTop / (scrollHeight - clientHeight));
+  /*
+   * Sized as a fraction of the track rather than in pixels, because the live
+   * rail is as tall as the window and does not know its own height in advance.
+   * The floor keeps the thumb grabbable on a very long rail.
+   */
+  const thumb = Math.max(MIN_THUMB, clientHeight / scrollHeight);
+  const offset = (1 - thumb) * (scrollTop / (scrollHeight - clientHeight));
 
   return (
     <div aria-hidden className="absolute w-[4px]" style={style}>
       <div className="absolute inset-0 rounded-[2px] bg-text-secondary opacity-15" />
       <div
         className="absolute left-0 w-[4px] rounded-[2px] bg-text-secondary opacity-60"
-        style={{ top: offset, height: thumbHeight }}
+        style={{ top: `${offset * 100}%`, height: `${thumb * 100}%` }}
       />
     </div>
   );

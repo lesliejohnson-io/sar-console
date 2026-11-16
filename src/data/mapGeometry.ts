@@ -141,10 +141,9 @@ export const ROSTER = {
  * Frames 238:2144 and 289:2394. The stat bar is anchored by its right edge
  * rather than its left: the live readings are wider than Screen 2's and
  * narrower than the incident's, and in all three frames the row ends against
- * the same edge of the top bar.
+ * the same edge of the top bar. That anchor is `statRight={0}` on the bar
+ * itself, so there is no constant for it here.
  */
-
-export const LIVE_STAT_BAR = { right: STAGE.width - (TOP_BAR.x + TOP_BAR.width) };
 
 /**
  * The event feed. Anchored by its bottom edge, just above the legend, so it
@@ -155,3 +154,47 @@ export const LIVE_FEED = { x: 580, width: 459, bottom: STAGE.height - 974 };
 
 /** How much brighter searched ground is than the sector's own wash. */
 export const SEARCHED_FILL_OPACITY = 0.34;
+
+/* ------------------------------------------- Screen 3 · the live shell */
+/*
+ * Screen 3 does not sit on the fixed stage the other screens do.
+ *
+ * The stage scales the whole console as one picture, which is right for a plan
+ * being reviewed: the frame is the thing. A mission being watched is different
+ * — the rail has to be reachable and the header has to be where the operator's
+ * eye already is, whatever window the console is open in. So on this screen
+ * the rail and the chrome are laid out in real pixels and only the map plane
+ * scales, filling whatever is left.
+ *
+ * **Flagged for design review:** the frames are drawn at 1440 x 1035 and have
+ * nothing to say about other window sizes.
+ */
+
+/** The gutter the chrome keeps from the edges of the map area. */
+export const LIVE_SHELL = {
+  gutter: TOP_BAR.x,
+  /** The header's fixed offset from the top of the window, at any size. */
+  headerTop: TOP_BAR.y,
+  headerHeight: TOP_BAR.height,
+  legendHeight: LEGEND.height,
+  /** The rail: fixed width, full window height. */
+  railWidth: PANEL.width,
+};
+
+/** The top bar's own box on the fixed stage, for Screens 1 and 2. */
+export const TOP_BAR_BOX = {
+  left: TOP_BAR.x,
+  top: TOP_BAR.y,
+  width: TOP_BAR.width,
+  height: TOP_BAR.height,
+};
+
+/**
+ * Where the row of readings sits *inside* the bar. Measured from the bar's own
+ * top-left, so the bar can be placed anywhere — on the stage at (9, 12), or
+ * stretched across the map area on the live screen.
+ */
+export const TOP_BAR_STAT = {
+  reviewX: STAT_BAR.x - TOP_BAR.x,
+  overviewX: OVERVIEW_STAT_BAR.x - TOP_BAR.x,
+};

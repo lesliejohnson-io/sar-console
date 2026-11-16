@@ -1,6 +1,12 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { LIVE_FEED } from '../data/mapGeometry';
 import { clock, entryKey, type LogEntry } from '../store/useLiveStore';
+
+const FEED_BOX: CSSProperties = {
+  left: LIVE_FEED.x,
+  bottom: LIVE_FEED.bottom,
+  width: LIVE_FEED.width,
+};
 
 /**
  * The event feed (frames 238:2144 and 289:2394): what the autonomy has done,
@@ -18,6 +24,7 @@ export function EventFeed({
   incident,
   selected,
   onSelect,
+  box = FEED_BOX,
 }: {
   entries: LogEntry[];
   hidden: boolean;
@@ -27,12 +34,14 @@ export function EventFeed({
   /** The selected line's key, which highlights what it is about on the map. */
   selected: string | null;
   onSelect: (key: string | null) => void;
+  /** Where the feed sits; the live shell anchors it to the map area's corner. */
+  box?: CSSProperties;
 }) {
   return (
     <section
       aria-label="Event feed"
       className="absolute flex flex-col items-start overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel pt-[10px] pr-[14px] pb-[8px] pl-[14px] shadow-top-bar"
-      style={{ left: LIVE_FEED.x, bottom: LIVE_FEED.bottom, width: LIVE_FEED.width }}
+      style={box}
     >
       <div className={`flex w-full items-start overflow-hidden ${hidden ? '' : 'pb-[6px]'}`}>
         <h2 className="shrink-0 text-[12px] font-semibold whitespace-nowrap text-text-primary">

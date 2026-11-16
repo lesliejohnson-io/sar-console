@@ -1,6 +1,6 @@
 import { AVAILABLE_UNITS, UNITS } from '../data/assets';
 import { MISSION_STATUS } from '../data/plan';
-import { OVERVIEW_STAT_BAR } from '../data/mapGeometry';
+import { TOP_BAR_STAT } from '../data/mapGeometry';
 import { StatDivider, TopBarChrome } from './TopBar';
 
 /**
@@ -10,7 +10,7 @@ import { StatDivider, TopBarChrome } from './TopBar';
  */
 export function OverviewTopBar() {
   return (
-    <TopBarChrome statX={OVERVIEW_STAT_BAR.x}>
+    <TopBarChrome statX={TOP_BAR_STAT.overviewX}>
       <div className="flex shrink-0 items-center gap-[5px] overflow-hidden whitespace-nowrap">
         <p className="text-[12px] text-text-secondary">Since landfall:</p>
         <p className="text-[15px] font-semibold text-text-primary">

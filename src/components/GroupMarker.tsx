@@ -1,4 +1,5 @@
 import { MARKER } from '../data/mapGeometry';
+import { MINUTE_MS } from '../data/live';
 import { unitNumber } from '../lib/units';
 import { StateBadge } from './StateBadge';
 import type { AssetType, UnitStatus } from '../data/types';
@@ -103,6 +104,13 @@ export interface GroupMarkerProps {
   showLabel?: boolean;
   /** Dimmed when the position is no longer current (out of contact). */
   opacity?: number;
+  /**
+   * True for a unit that is flying a pattern. The clock moves a marker once
+   * per mission minute; gliding over that same minute turns a row of jumps
+   * back into flight. Reduced motion switches this off at the call site, and
+   * the global `prefers-reduced-motion` rule cancels the transition anyway.
+   */
+  moving?: boolean;
 }
 
 export function GroupMarker({
@@ -117,10 +125,18 @@ export function GroupMarker({
   showStatus = true,
   showLabel = true,
   opacity,
+  moving = false,
 }: GroupMarkerProps) {
   const count = unitIds.length;
   const suffix = count === 1 ? padded(unitIds[0]) : `×${count}`;
-  const position = { left: x, top: y, width: MARKER.width, height: MARKER.height, opacity };
+  const position = {
+    left: x,
+    top: y,
+    width: MARKER.width,
+    height: MARKER.height,
+    opacity,
+    transition: moving ? `left ${MINUTE_MS}ms linear, top ${MINUTE_MS}ms linear` : undefined,
+  };
   const face = (
     <MarkerFace
       type={type}

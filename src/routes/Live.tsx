@@ -6,10 +6,10 @@ import { Legend } from '../components/Legend';
 import { LiveFlagCard } from '../components/LiveFlagCard';
 import { LiveMapLayer } from '../components/LiveMapLayer';
 import { LiveRegion } from '../components/LiveRegion';
+import { LiveShell, CHROME } from '../components/LiveShell';
 import { LiveTopBar } from '../components/LiveTopBar';
 import { RestartDemo } from '../components/RestartDemo';
 import { SectorStatusPanel } from '../components/SectorStatusPanel';
-import { Stage } from '../components/Stage';
 import { BEHIND_TOLERANCE, INCIDENT, MINUTE_MS } from '../data/live';
 import { SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
 import { coverage } from '../lib/coverage';
@@ -21,6 +21,7 @@ import {
   highlighted,
   incidentPhase,
   liveBySector,
+  outages,
   outOfContact,
   sinceIncident,
   untilResolved,
@@ -39,6 +40,10 @@ import type { SectorId } from '../data/types';
  *
  * `/live?at=incident` opens two minutes into the relay loss, which is the
  * moment frame 289:2394 draws.
+ *
+ * This is the one screen that does not sit on the fixed stage: a mission being
+ * watched fills the window, with the rail at full height beside it. See
+ * `LiveShell`.
  */
 export function Live() {
   const navigate = useNavigate();
@@ -114,19 +119,19 @@ export function Live() {
   /* Nothing launched: there is no mission to watch. */
   if (launched === null) {
     return (
-      <Stage>
-        <div className="absolute inset-0 bg-surface-app" />
+      <div className="relative h-screen w-screen overflow-hidden bg-surface-app">
         <LiveTopBar
           minute={0}
           worst={null}
           incidentOpen={false}
           inContact={availableCount()}
           available={availableCount()}
+          box={CHROME.header}
         />
         <section
           aria-labelledby="live-title"
           className="absolute flex flex-col gap-[8px] rounded-[10px] border border-border-subtle bg-surface-panel p-[21px] shadow-panel"
-          style={{ left: 9, top: 85, width: 460 }}
+          style={{ left: CHROME.header.left, top: 85, width: 460 }}
         >
           {/* No Figma frame for this state — copy proposed, flagged for review. */}
           <h2
@@ -147,15 +152,16 @@ export function Live() {
             BACK TO THE PLAN
           </button>
         </section>
-        <Legend />
+        <Legend box={CHROME.legend} />
         <RestartDemo
+          box={CHROME.restart}
           onRestart={() => {
             resetPlan();
             live.reset();
             navigate('/overview');
           }}
         />
-      </Stage>
+      </div>
     );
   }
 
@@ -278,98 +284,111 @@ export function Live() {
   const worst = furthestBehind(bySector);
   const inContact = availableCount() - lost.length;
 
+  const stoppages = outages(live, unitsBySector);
+
   return (
-    <Stage>
-      <LiveMapLayer
-        unitsBySector={unitsBySector}
-        relayUnits={relayUnits}
-        live={bySector}
-        outOfContact={lost}
-        incidentOpen={incidentOpen}
-        relayDown={incidentApplies && phase !== 'none'}
-        since={since}
-        movingRelay={
-          live.resolution === 'a' && live.resolvedFrom !== null
-            ? {
-                unitId: INCIDENT.options[0].moveUnit!,
-                progress: 1 - until / INCIDENT.options[0].minutes,
-              }
-            : null
-        }
-        returnedToStaging={
-          live.resolution === 'b' && phase === 'resolved' ? INCIDENT.affectedUnits : []
-        }
-        selectedSector={selectedSector}
-        highlight={highlighted(live, unitsBySector)}
-      />
+    <LiveShell
+      map={
+        <LiveMapLayer
+          unitsBySector={unitsBySector}
+          relayUnits={relayUnits}
+          live={bySector}
+          outOfContact={lost}
+          minute={live.minute}
+          outages={stoppages}
+          incidentOpen={incidentOpen}
+          relayDown={incidentApplies && phase !== 'none'}
+          since={since}
+          movingRelay={
+            live.resolution === 'a' && live.resolvedFrom !== null
+              ? {
+                  unitId: INCIDENT.options[0].moveUnit!,
+                  progress: 1 - until / INCIDENT.options[0].minutes,
+                }
+              : null
+          }
+          returnedToStaging={
+            live.resolution === 'b' && phase === 'resolved' ? INCIDENT.affectedUnits : []
+          }
+          selectedSector={selectedSector}
+          highlight={highlighted(live, unitsBySector)}
+        />
+      }
+      chrome={
+        <>
+          <LiveTopBar
+            minute={live.minute}
+            worst={worst}
+            incidentOpen={incidentOpen}
+            inContact={inContact}
+            available={availableCount()}
+            box={CHROME.header}
+          />
 
-      <LiveTopBar
-        minute={live.minute}
-        worst={worst}
-        incidentOpen={incidentOpen}
-        inContact={inContact}
-        available={availableCount()}
-      />
+          <EventFeed
+            entries={feed(live)}
+            hidden={live.feedHidden}
+            onToggle={live.toggleFeed}
+            selected={live.selectedEvent}
+            onSelect={live.selectEvent}
+            box={CHROME.feed}
+            incident={
+              incidentOpen ? (
+                <div ref={incidentRef} tabIndex={-1} className="w-full">
+                  <IncidentCard
+                    phase={phase}
+                    at={clock(INCIDENT.atMinute)}
+                    since={since}
+                    until={until}
+                    resolution={live.resolution}
+                    chosenAt={live.resolvedFrom === null ? null : clock(live.resolvedFrom)}
+                    before={before}
+                    after={after}
+                    effectsOpen={live.effectsOpen}
+                    onToggleEffects={live.toggleEffects}
+                    onChoose={live.choose}
+                    onPauseSector={() => live.pauseSector(INCIDENT.sector)}
+                    sectorPaused={bySector[INCIDENT.sector].paused}
+                  />
+                </div>
+              ) : undefined
+            }
+          />
 
-      <SectorStatusPanel
-        assignments={assignments}
-        unitsBySector={unitsBySector}
-        relayUnits={relayUnits}
-        live={bySector}
-        outOfContact={lost}
-        flags={flags}
-        holding={live.heldAllAt !== null}
-        onToggleHold={live.toggleHoldAll}
-        lockedUnits={lockedUnits}
-        onToggleLock={toggleSectorLock}
-      />
-
-      <EventFeed
-        entries={feed(live)}
-        hidden={live.feedHidden}
-        onToggle={live.toggleFeed}
-        selected={live.selectedEvent}
-        onSelect={live.selectEvent}
-        incident={
-          incidentOpen ? (
-            <div ref={incidentRef} tabIndex={-1} className="w-full">
-              <IncidentCard
-                phase={phase}
-                at={clock(INCIDENT.atMinute)}
-                since={since}
-                until={until}
-                resolution={live.resolution}
-                chosenAt={live.resolvedFrom === null ? null : clock(live.resolvedFrom)}
-                before={before}
-                after={after}
-                effectsOpen={live.effectsOpen}
-                onToggleEffects={live.toggleEffects}
-                onChoose={live.choose}
-                onPauseSector={() => live.pauseSector(INCIDENT.sector)}
-                sectorPaused={bySector[INCIDENT.sector].paused}
-              />
-            </div>
-          ) : undefined
-        }
-      />
-
-      <Legend />
-      <RestartDemo
-        onRestart={() => {
-          resetPlan();
-          live.reset();
-          navigate('/overview');
-        }}
-      />
-      <LiveRegion message={announcement} />
-      <Announcer
-        phase={phase}
-        before={before}
-        after={after}
-        worst={worst}
-        onSay={setAnnouncement}
-      />
-    </Stage>
+          <Legend box={CHROME.legend} />
+          <RestartDemo
+            box={CHROME.restart}
+            onRestart={() => {
+              resetPlan();
+              live.reset();
+              navigate('/overview');
+            }}
+          />
+          <LiveRegion message={announcement} />
+          <Announcer
+            phase={phase}
+            before={before}
+            after={after}
+            worst={worst}
+            onSay={setAnnouncement}
+          />
+        </>
+      }
+      rail={
+        <SectorStatusPanel
+          assignments={assignments}
+          unitsBySector={unitsBySector}
+          relayUnits={relayUnits}
+          live={bySector}
+          outOfContact={lost}
+          flags={flags}
+          holding={live.heldAllAt !== null}
+          onToggleHold={live.toggleHoldAll}
+          lockedUnits={lockedUnits}
+          onToggleLock={toggleSectorLock}
+        />
+      }
+    />
   );
 }
 

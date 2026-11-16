@@ -42,6 +42,12 @@
    * are flagged for design review.
    */
   --color-feedback-info: #c3d3d8;
+  /*
+   * The page behind the console. The live screen fills the window, so this
+   * shows only in the band left over when the map's aspect does not match the
+   * viewport's; black keeps the stage reading as the lit thing on the desk.
+   */
+  --color-surface-void: #000000;
   --color-map-backdrop: #252528;
   --color-map-patch: #233941;
 
@@ -62,9 +68,20 @@
     height: 100%;
   }
 
+  /*
+   * The console owns the window: it is sized to the viewport and scrolls
+   * nothing. A page scrollbar on an operator console would mean part of the
+   * mission was off screen.
+   */
+  html,
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     margin: 0;
-    background-color: var(--color-surface-app);
+    background-color: var(--color-surface-void);
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;

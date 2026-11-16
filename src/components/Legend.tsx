@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { LEGEND } from '../data/mapGeometry';
 import { StateBadge } from './StateBadge';
 import type { UnitStatus } from '../data/types';
@@ -11,11 +12,18 @@ const ITEMS: { status: UnitStatus; label: string; size: number }[] = [
   { status: 'unavailable', label: 'Unavailable', size: 10 },
 ];
 
-export function Legend() {
+const LEGEND_BOX: CSSProperties = {
+  left: LEGEND.x,
+  top: LEGEND.y,
+  width: LEGEND.width,
+  height: LEGEND.height,
+};
+
+export function Legend({ box = LEGEND_BOX }: { box?: CSSProperties }) {
   return (
     <div
       className="absolute flex items-center gap-[18px] overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel px-[12px] shadow-legend"
-      style={{ left: LEGEND.x, top: LEGEND.y, width: LEGEND.width, height: LEGEND.height }}
+      style={box}
     >
       {ITEMS.map((item) => (
         <div key={item.status} className="flex shrink-0 items-center gap-[6px]">
@@ -23,7 +31,7 @@ export function Legend() {
           <p className="whitespace-nowrap text-[12px] text-text-secondary">{item.label}</p>
         </div>
       ))}
-      <p className="w-[291px] shrink-0 text-[12px] text-text-secondary">
+      <p className="min-w-[291px] flex-1 text-[12px] text-text-secondary">
         Ring = needs attention · Dimmed = position not current
       </p>
     </div>

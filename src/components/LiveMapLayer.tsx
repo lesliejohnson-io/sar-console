@@ -1,10 +1,4 @@
-import {
-  MARKER,
-  MARKER_ROW,
-  SEARCHED_FILL_OPACITY,
-  SECTOR_LABEL_POS,
-  STAGE,
-} from '../data/mapGeometry';
+import { MARKER, SEARCHED_FILL_OPACITY, SECTOR_LABEL_POS, STAGE } from '../data/mapGeometry';
 import {
   INCIDENT_AFFECTED_LABEL,
   INCIDENT_RELAY_LABEL,
@@ -22,7 +16,10 @@ import { SECTORS } from '../data/sectors';
 import { INCIDENT } from '../data/live';
 import { SITE_GROUPS } from '../data/launchSites';
 import { UNITS_BY_ID } from '../data/assets';
-import { groupByType, unitType } from '../lib/units';
+import { unitType } from '../lib/units';
+import { bandsFor, cellsPath, clearedCells, unitPosition, type Band } from '../lib/sweep';
+import { useReducedMotion } from '../lib/useReducedMotion';
+import type { Outage } from '../lib/live';
 import { GroupMarker } from './GroupMarker';
 import { MapBackdrop } from './MapBackdrop';
 import type { SectorLive } from '../store/useLiveStore';
@@ -36,6 +33,10 @@ export interface LiveMapLayerProps {
   relayUnits: string[];
   live: Record<SectorId, SectorLive>;
   outOfContact: string[];
+  /** The mission minute: where every unit is, and how much ground is cleared. */
+  minute: number;
+  /** Who has not been searching, and since when. */
+  outages: readonly Outage[];
   /** True while the operator still has to decide: the ring and labels show. */
   incidentOpen: boolean;
   /**
@@ -64,18 +65,21 @@ export interface LiveMapLayerProps {
 /**
  * The map, live (frames 238:2144 and 289:2394).
  *
- * Three things are true here that are not true on Screen 2. Searched ground
- * fills in, so the sector shows its own progress rather than a forecast. Units
- * stand where they are rather than in a row per sector. And the map carries
- * the colour rule from the `note/Live map color rule` frame: purple for a
- * change the autonomy made by itself, amber for a place the operator has to
- * decide, and nothing at all for everything running to plan.
+ * Three things are true here that are not true on Screen 2. The ground is
+ * searched cell by cell, by the units that fly over it, so the map shows not
+ * just how much has been covered but which part. Units fly their own patterns
+ * rather than standing in a row per sector. And the map carries the colour
+ * rule from the `note/Live map color rule` frame: purple for a change the
+ * autonomy made by itself, amber for a place the operator has to decide, and
+ * nothing at all for everything running to plan.
  */
 export function LiveMapLayer({
   unitsBySector,
   relayUnits,
   live,
   outOfContact,
+  minute,
+  outages,
   incidentOpen,
   relayDown,
   since,
@@ -84,8 +88,20 @@ export function LiveMapLayer({
   selectedSector,
   highlight,
 }: LiveMapLayerProps) {
-  const placed = placements(unitsBySector, relayUnits, movingRelay, returnedToStaging);
+  const stillMoving = !useReducedMotion();
+  const bands = allBands(unitsBySector);
+  const placed = placements(
+    unitsBySector,
+    relayUnits,
+    movingRelay,
+    returnedToStaging,
+    bands,
+    minute,
+    outages,
+    stillMoving,
+  );
   const lit = highlight ? new Set(highlight.units) : null;
+  const affected = labelOver(placed, outOfContact);
 
   return (
     <div
@@ -100,10 +116,11 @@ export function LiveMapLayer({
         <SectorShape
           key={shape.id}
           shape={shape}
-          searched={live[shape.id].searched}
           highlighted={highlight !== null && highlight.sector === shape.id}
         />
       ))}
+
+      <SearchedGround unitsBySector={unitsBySector} live={live} minute={minute} outages={outages} />
 
       {SECTORS.map((sector) => {
         const position =
@@ -179,6 +196,14 @@ export function LiveMapLayer({
             showLabel={isRelayDown || marker.unitIds.length > 1 || (lit !== null && !unlit)}
             opacity={unlit ? HIGHLIGHT_DIM : lost ? UNTRUSTED_OPACITY : undefined}
             label={labelFor(marker.unitIds, marker.type, lost, isRelayDown, since)}
+            /*
+             * A unit that is flying glides between one minute's position and
+             * the next, so the pattern reads as a pattern rather than a
+             * sequence of jumps. A unit out of contact is not moving and is
+             * not given the transition either: it is drawn exactly where it
+             * stopped.
+             */
+            moving={marker.moving && stillMoving}
           />
         );
       })}
@@ -216,9 +241,16 @@ export function LiveMapLayer({
             {INCIDENT.mapLabel}
           </MapPill>
 
+          {/*
+            * The pill follows the units it is about. Figma pins it beside the
+            * cluster the frame draws, but a unit holding at its last known
+            * position holds wherever it happened to be, so the label is placed
+            * from where they actually are and only falls back to the frame's
+            * own spot if none of them is on the map.
+            */}
           <MapPill
-            x={INCIDENT_AFFECTED_LABEL.x}
-            y={INCIDENT_AFFECTED_LABEL.y}
+            x={affected?.x ?? INCIDENT_AFFECTED_LABEL.x}
+            y={affected?.y ?? INCIDENT_AFFECTED_LABEL.y}
             className="text-status-out-of-contact"
           >
             HYD ×{INCIDENT.affectedUnits.length} · OUT OF CONTACT · {since} MIN
@@ -253,31 +285,14 @@ function MapPill({
   );
 }
 
-/**
- * One sector: the ground it holds, and how much of that has been searched.
- *
- * The searched part is the sector's own outline, drawn brighter and scaled
- * down about the corner the search started from, so the shape of what has
- * been covered has the shape of the sector rather than the shape of the
- * drawing tool. The scale is the square root of the percentage, which makes
- * the *area* it covers follow the number — a sector that reads 42% has 42% of
- * its ground filled in.
- *
- * Figma exports a different fixed `searched/...` shape per frame, which a
- * running screen cannot do. This is the adaptation, and it is flagged for
- * design review.
- */
+/** One sector: the ground it holds, washed and outlined. */
 function SectorShape({
   shape,
-  searched,
   highlighted,
 }: {
   shape: (typeof SECTOR_SHAPES)[number];
-  searched: number;
   highlighted: boolean;
 }) {
-  const reach = Math.sqrt(Math.max(0, Math.min(100, searched)) / 100);
-
   return (
     <svg
       aria-hidden
@@ -290,13 +305,6 @@ function SectorShape({
       fill="none"
     >
       <path d={shape.d} className="fill-map-searched" opacity={SECTOR_FILL_OPACITY} />
-      <g transform={`scale(${reach})`}>
-        <path
-          d={shape.d}
-          className="fill-map-searched"
-          opacity={SEARCHED_FILL_OPACITY - SECTOR_FILL_OPACITY}
-        />
-      </g>
       <path
         d={shape.d}
         fill="none"
@@ -306,6 +314,63 @@ function SectorShape({
         }
         className={highlighted ? 'stroke-interaction-primary' : 'stroke-map-zone-boundary'}
       />
+    </svg>
+  );
+}
+
+/**
+ * The ground that has actually been searched, cell by cell.
+ *
+ * Every sector starts covered by its own dim wash and brightens a cell at a
+ * time as the unit working that strip passes over it, so the map answers a
+ * question the old drifting fill could not: not how much has been searched,
+ * but *which* part — and, when seven Hydras stop, which strips nobody is
+ * flying any more.
+ *
+ * The count is not emergent. It is taken from the same `searched` figure the
+ * rail reports and handed out to the units in proportion to how long each has
+ * been searching, so the cleared cells always come to the percentage in the
+ * panel. See `lib/sweep.ts`.
+ *
+ * **Flagged for design review:** Figma exports a fixed `searched/...` shape
+ * per frame, which a running screen cannot use. The grid is the adaptation —
+ * the cell size and the 1 px gap between cells are proposed here.
+ */
+function SearchedGround({
+  unitsBySector,
+  live,
+  minute,
+  outages,
+}: {
+  unitsBySector: Record<SectorId, string[]>;
+  live: Record<SectorId, SectorLive>;
+  minute: number;
+  outages: readonly Outage[];
+}) {
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      width={STAGE.width}
+      height={STAGE.height}
+      fill="none"
+    >
+      {SECTOR_SHAPES.map((shape) => (
+        <path
+          key={shape.id}
+          d={cellsPath(
+            clearedCells(
+              shape.id,
+              unitsBySector[shape.id],
+              live[shape.id].searched,
+              minute,
+              outages,
+            ),
+          )}
+          className="fill-map-searched"
+          opacity={SEARCHED_FILL_OPACITY - SECTOR_FILL_OPACITY}
+        />
+      ))}
     </svg>
   );
 }
@@ -351,21 +416,55 @@ interface Placement {
   type: AssetType;
   x: number;
   y: number;
+  /** Whether this marker is flying a pattern, and so should glide. */
+  moving: boolean;
 }
+
+/** Each sector's strips, worked out once per render and shared. */
+const allBands = (
+  unitsBySector: Record<SectorId, string[]>,
+): Record<SectorId, Band[]> =>
+  Object.fromEntries(
+    (Object.keys(unitsBySector) as SectorId[]).map((sector) => [
+      sector,
+      bandsFor(sector, unitsBySector[sector]),
+    ]),
+  ) as Record<SectorId, Band[]>;
+
+/**
+ * Where a marker's box goes for a unit at a point. The glyph sits near the top
+ * centre of the 52 x 44 box, so the box is offset to put the glyph on the spot
+ * rather than the box's own corner.
+ */
+const GLYPH_CENTRE = { x: MARKER.width / 2, y: 14 };
 
 /**
  * Where every flying unit is drawn.
  *
- * The scripted positions are used wherever the plan still matches the one the
- * frame was drawn from. A unit the operator moved somewhere else before launch
- * falls back to its sector's marker row, so a changed plan never leaves a
- * marker sitting over the sector the unit left.
+ * Searching units fly their own patterns — a Hydra or a Kraken mows its strip,
+ * a Roc circles its own — computed from the mission minute, so the markers and
+ * the ground they have cleared are the same story told twice. The Griffins
+ * hold station where the script places them, which is what a relay does.
+ *
+ * Under `prefers-reduced-motion` nothing is computed from the clock: every
+ * searching unit is drawn at the centre of its strip and stays there. The
+ * ground still fills in — that is the mission, not an animation — but no
+ * marker moves.
+ *
+ * **Flagged for design review:** the frames draw one marker per asset type per
+ * sector. Flying lanes needs a unit to be its own marker, so a sector's seven
+ * Hydras are now seven markers; labels and badges stay off unless a unit is an
+ * exception, which is the rule in the `note/Live map labels and badges` frame.
  */
 function placements(
   unitsBySector: Record<SectorId, string[]>,
   relayUnits: string[],
   movingRelay: { unitId: string; progress: number } | null,
   returnedToStaging: readonly string[],
+  bands: Record<SectorId, Band[]>,
+  minute: number,
+  outages: readonly Outage[],
+  moving: boolean,
 ): Placement[] {
   const placed: Placement[] = [];
   const done = new Set<string>();
@@ -383,27 +482,19 @@ function placements(
         type: unitType(returnedToStaging[0]),
         x: staging.x,
         y: staging.y,
+        moving: false,
       });
     }
   }
 
-  const sectorOf = new Map<string, SectorId | 'ALL'>();
-  for (const [sector, unitIds] of Object.entries(unitsBySector)) {
-    for (const unitId of unitIds) sectorOf.set(unitId, sector as SectorId);
-  }
-  for (const unitId of relayUnits) sectorOf.set(unitId, 'ALL');
-
+  /* The relays: on station over a sector, or crossing to another. */
   for (const marker of LIVE_MARKERS) {
-    // A Griffin flies relay over one sector while it is live, so it is drawn
-    // where the script stations it whether the plan calls that "all sectors"
-    // or one of them.
-    const unitIds = marker.unitIds.filter((unitId) => {
-      if (done.has(unitId)) return false;
-      const sector = sectorOf.get(unitId);
-      return sector === marker.sector || (sector === 'ALL' && marker.type === 'GRF');
-    });
-    if (unitIds.length === 0) continue;
+    if (marker.type !== 'GRF') continue;
 
+    const unitIds = marker.unitIds.filter(
+      (unitId) => !done.has(unitId) && relayUnits.includes(unitId),
+    );
+    if (unitIds.length === 0) continue;
     unitIds.forEach((unitId) => done.add(unitId));
 
     // A relay on its way to cover another sector is drawn along the run it is
@@ -418,24 +509,55 @@ function placements(
       type: marker.type,
       x: target ? lerp(marker.x, target.x, movingRelay!.progress) : marker.x,
       y: target ? lerp(marker.y, target.y, movingRelay!.progress) : marker.y,
+      moving: target !== undefined,
     });
   }
 
-  // Anything the script does not know about: lay it out the way Screen 2 does.
+  /* Everything searching: one marker per unit, on its own pattern. */
   for (const [sector, unitIds] of Object.entries(unitsBySector) as [SectorId, string[]][]) {
-    const loose = unitIds.filter((unitId) => !done.has(unitId));
-    groupByType(loose).forEach((group, index) => {
+    for (const band of bands[sector]) {
+      if (done.has(band.unitId) || !unitIds.includes(band.unitId)) continue;
+      done.add(band.unitId);
+
+      const point = moving
+        ? unitPosition(band.unitId, band, minute, outages)
+        : band.centre;
+
       placed.push({
-        unitIds: group.unitIds,
-        type: group.type,
-        x: MARKER_ROW[sector].x + index * MARKER.step,
-        y: MARKER_ROW[sector].y,
+        unitIds: [band.unitId],
+        type: unitType(band.unitId),
+        x: point.x - GLYPH_CENTRE.x,
+        y: point.y - GLYPH_CENTRE.y,
+        moving,
       });
-    });
+    }
   }
 
   return placed;
 }
+
+/**
+ * Where to put one label for a scattered group of units: centred on them and
+ * just below, in the map's own coordinate space.
+ */
+function labelOver(
+  placed: readonly Placement[],
+  unitIds: readonly string[],
+): { x: number; y: number } | null {
+  const theirs = placed.filter((marker) => marker.unitIds.some((id) => unitIds.includes(id)));
+  if (theirs.length === 0) return null;
+
+  const left = Math.min(...theirs.map((marker) => marker.x));
+  const right = Math.max(...theirs.map((marker) => marker.x)) + MARKER.width;
+  const bottom = Math.max(...theirs.map((marker) => marker.y)) + MARKER.height;
+
+  // Below the group, not above: the relay that caused this is drawn above
+  // them with a label of its own, and two pills in the same place read as one.
+  return { x: (left + right) / 2 - AFFECTED_LABEL_WIDTH / 2, y: bottom + 4 };
+}
+
+/** Roughly how wide "HYD x7 · OUT OF CONTACT · nn MIN" runs, for centring. */
+const AFFECTED_LABEL_WIDTH = 210;
 
 const lerp = (from: number, to: number, t: number): number =>
   from + (to - from) * Math.max(0, Math.min(1, t));

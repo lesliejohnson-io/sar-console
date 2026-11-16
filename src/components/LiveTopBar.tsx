@@ -1,4 +1,4 @@
-import { LIVE_STAT_BAR } from '../data/mapGeometry';
+import type { CSSProperties } from 'react';
 import { SECTORS_BY_ID } from '../data/sectors';
 import { INCIDENT } from '../data/live';
 import { elapsedLabel } from '../lib/live';
@@ -12,6 +12,8 @@ export interface LiveTopBarProps {
   incidentOpen: boolean;
   inContact: number;
   available: number;
+  /** Where the bar sits; the live shell stretches it across the map area. */
+  box?: CSSProperties;
 }
 
 /**
@@ -33,11 +35,12 @@ export function LiveTopBar({
   incidentOpen,
   inContact,
   available,
+  box,
 }: LiveTopBarProps) {
   const behind = worst !== null && worst.behind > 0;
 
   return (
-    <TopBarChrome statRight={LIVE_STAT_BAR.right}>
+    <TopBarChrome statRight={0} box={box}>
       <div className="flex shrink-0 items-center gap-[5px] overflow-hidden whitespace-nowrap">
         <p className="text-[12px] text-text-secondary">Live:</p>
         <p className="text-[15px] font-semibold text-text-primary">{elapsedLabel(minute)}</p>
