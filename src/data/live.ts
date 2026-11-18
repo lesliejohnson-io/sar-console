@@ -14,11 +14,22 @@ import type { SectorId } from './types';
 export const LIVE_START = '09:00';
 
 /**
- * How fast the demo runs the mission clock: one mission minute per 400 ms, so
- * the relay loss arrives about 16 seconds in. `/live?at=incident` skips
- * straight to it.
+ * Playback pacing: how many minutes of mission time one second of playback
+ * shows. At 1, one second on screen is one mission minute — 60x real time.
+ *
+ * This is demo pacing, not a product decision. A live console runs at real
+ * time, with replay at a rate the operator picks. Here the rate only has to be
+ * slow enough that an operator can follow one unit across the map, and quick
+ * enough that the relay loss (mission minute 40) arrives in about 40 seconds
+ * rather than 40 minutes. `/live?at=incident` still skips straight to it.
+ *
+ * It changes nothing but the playback: every event, pace and coverage figure is
+ * counted in mission minutes, so the story reads the same at any rate.
  */
-export const MINUTE_MS = 400;
+export const MISSION_MINUTES_PER_PLAYBACK_SECOND = 1;
+
+/** One mission minute in playback milliseconds — the clock's tick. */
+export const MINUTE_MS = 1000 / MISSION_MINUTES_PER_PLAYBACK_SECOND;
 
 /**
  * How each sector is actually running against its plan — the one scripted
