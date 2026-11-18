@@ -1,4 +1,4 @@
-import { MARKER, SEARCHED_FILL_OPACITY, SECTOR_LABEL_POS, STAGE } from '../data/mapGeometry';
+import { MARKER, MARKER_ANCHOR, SEARCHED_FILL_OPACITY, SECTOR_LABEL_POS, STAGE } from '../data/mapGeometry';
 import {
   INCIDENT_AFFECTED_LABEL,
   INCIDENT_RELAY_LABEL,
@@ -445,11 +445,11 @@ const allBands = (
   ) as Record<SectorId, Band[]>;
 
 /**
- * Where a marker's box goes for a unit at a point. The glyph sits near the top
- * centre of the 52 x 44 box, so the box is offset to put the glyph on the spot
- * rather than the box's own corner.
+ * Where a marker's box goes for a unit at a point: the box is offset so its
+ * anchor — where the glyph is centred — lands on the spot, rather than the
+ * box's own corner.
  */
-const GLYPH_CENTRE = { x: MARKER.width / 2, y: 14 };
+const GLYPH_CENTRE = MARKER_ANCHOR;
 
 /**
  * Where every flying unit is drawn.

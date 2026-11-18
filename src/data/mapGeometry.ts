@@ -52,7 +52,25 @@ export const SECTOR_LABEL_POS: Record<SectorId, { x: number; y: number }> = {
 
 export const RELAY_LABEL_POS = { x: 140, y: 150, lines: ['ALL SECTORS', 'COMMS RELAY'] };
 
-export const MARKER = { width: 52, height: 44, step: 66.96 };
+/**
+ * The marker's box: the area the operator aims at, and the frame its name
+ * pill is laid out in. It is deliberately much bigger than the symbol drawn
+ * inside it, so shrinking the symbol does not shrink the target.
+ *
+ * `icon` is the one place an asset glyph's drawn size is set — the longest
+ * side of the symbol, whatever shape it is. It is smaller than a cell of the
+ * search grid (`CELL`, 18 units, in `lib/sweep.ts`) on purpose: a drone drawn
+ * the size of a cell reads as one aircraft covering that whole square of
+ * ground. `lib/markers.test.ts` holds the two to that relationship.
+ */
+export const MARKER = { width: 52, height: 44, step: 66.96, icon: 12 };
+
+/**
+ * The point inside the box that a symbol is centred on — and that a marker is
+ * positioned by on the live map, where a unit's position is this spot rather
+ * than the corner of its box.
+ */
+export const MARKER_ANCHOR = { x: MARKER.width / 2, y: 14 };
 
 /**
  * Where a sector's group markers sit: one marker per asset type, laid out left

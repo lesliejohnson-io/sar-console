@@ -1,5 +1,6 @@
 import { MARKER } from '../data/mapGeometry';
 import { MINUTE_MS } from '../data/live';
+import { badgeAt, BADGE_SIZE, glyphBox, LABEL_HEIGHT, labelTop } from '../lib/markers';
 import { unitNumber } from '../lib/units';
 import { StateBadge } from './StateBadge';
 import type { AssetType, UnitStatus } from '../data/types';
@@ -13,26 +14,21 @@ import glyphGrf from '../assets/icons/glyph-grf.svg';
  * badge says how it is doing, and the pill names it: a single unit shows its
  * number ("ROC · 01"), a group shows its count ("HYD · x6").
  *
- * Positions are the exported Figma geometry for the 52 x 44 marker: the glyph
- * sits at its natural size, the badge is 8 px, and the pill fills the bottom.
+ * The 52 x 44 box is the hit area. The glyph drawn inside it is much smaller —
+ * its size is the one `MARKER.icon` token, laid out by `lib/markers` — so a
+ * drone reads smaller than a cell of the search grid without becoming harder
+ * to click or drag.
  *
  * Clicking a group of more than one fans it out into its individual units, so
  * the operator can take hold of one. The face itself is shared with
  * `UnitMarker`, which is what a fanned-out unit is.
  */
 
-const GLYPH: Record<AssetType, { src: string; x: number; y: number; w: number; h: number }> = {
-  ROC: { src: glyphRoc, x: 13.45, y: -1, w: 29.1111, h: 30 },
-  GRF: { src: glyphGrf, x: 13.45, y: -1, w: 29.1111, h: 30 },
-  HYD: { src: glyphHyd, x: 16, y: 4, w: 24.3633, h: 25.0448 },
-  KRK: { src: glyphKrk, x: 15, y: 0, w: 24, h: 24 },
-};
-
-const BADGE: Record<AssetType, { x: number; y: number }> = {
-  ROC: { x: 36.5, y: 15.5 },
-  HYD: { x: 37.6, y: 17.54 },
-  KRK: { x: 35, y: 15.5 },
-  GRF: { x: 33, y: 18 },
+const GLYPH_SRC: Record<AssetType, string> = {
+  ROC: glyphRoc,
+  GRF: glyphGrf,
+  HYD: glyphHyd,
+  KRK: glyphKrk,
 };
 
 /**
@@ -73,31 +69,34 @@ export function MarkerFace({
   /** True for a unit in flight, so a change of heading reads as a turn. */
   turning?: boolean;
 }) {
-  const glyph = GLYPH[type];
-  const badge = BADGE[type];
+  const glyph = glyphBox(type);
+  const badge = badgeAt(type);
 
   return (
     <>
       <img
         alt=""
-        src={glyph.src}
-        width={glyph.w}
-        height={glyph.h}
+        src={GLYPH_SRC[type]}
+        width={glyph.width}
+        height={glyph.height}
         className={`absolute max-w-none ${type === 'KRK' ? 'drop-shadow-marker' : ''}`}
         style={{
-          left: glyph.x,
-          top: glyph.y,
+          left: glyph.left,
+          top: glyph.top,
           transform: bearing === 0 ? undefined : `rotate(${bearing}deg)`,
           transition: turning ? `transform ${MINUTE_MS}ms linear` : undefined,
         }}
       />
       {showStatus && (
-        <div className="absolute" style={{ left: badge.x, top: badge.y }}>
-          <StateBadge status={status} size={8} />
+        <div className="absolute" style={{ left: badge.left, top: badge.top }}>
+          <StateBadge status={status} size={BADGE_SIZE} />
         </div>
       )}
       {showLabel && (
-        <div className="absolute inset-x-0 bottom-0 flex h-[14px] items-center gap-[5px] rounded-[99px] bg-map-label-pill px-[5px] py-px font-mono text-[9px] whitespace-nowrap text-text-primary">
+        <div
+          className="absolute inset-x-0 flex items-center gap-[5px] rounded-[99px] bg-map-label-pill px-[5px] py-px font-mono text-[9px] whitespace-nowrap text-text-primary"
+          style={{ top: labelTop(), height: LABEL_HEIGHT }}
+        >
           <p>{type} ·</p>
           <p>{suffix}</p>
         </div>
