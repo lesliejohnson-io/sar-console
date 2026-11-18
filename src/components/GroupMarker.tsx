@@ -38,6 +38,11 @@ const BADGE: Record<AssetType, { x: number; y: number }> = {
 /**
  * The glyph, badge and pill. Laid out in the marker's own 52 x 44 box.
  *
+ * The glyph turns to the unit's heading and nothing else does. Every symbol is
+ * drawn nose-up, so the bearing is the rotation; the badge keeps its corner
+ * and the pill stays level, because a label that leans with the aircraft is a
+ * label the operator has to tilt their head to read.
+ *
  * The badge and the pill are both optional, because what a marker has to say
  * depends on the screen. Screen 2 is a plan, so every marker is labelled and
  * carries its state. Screen 3 is 36 units flying at once: labels stay off
@@ -51,12 +56,22 @@ export function MarkerFace({
   suffix,
   showStatus = true,
   showLabel = true,
+  bearing = 0,
+  turning = false,
 }: {
   type: AssetType;
   status: UnitStatus;
   suffix: string;
   showStatus?: boolean;
   showLabel?: boolean;
+  /**
+   * Which way the unit is pointing: degrees clockwise from north, from the
+   * telemetry it reports. Zero — a unit that is not flying anywhere, which is
+   * every unit before launch — leaves the glyph as Figma drew it.
+   */
+  bearing?: number;
+  /** True for a unit in flight, so a change of heading reads as a turn. */
+  turning?: boolean;
 }) {
   const glyph = GLYPH[type];
   const badge = BADGE[type];
@@ -69,7 +84,12 @@ export function MarkerFace({
         width={glyph.w}
         height={glyph.h}
         className={`absolute max-w-none ${type === 'KRK' ? 'drop-shadow-marker' : ''}`}
-        style={{ left: glyph.x, top: glyph.y }}
+        style={{
+          left: glyph.x,
+          top: glyph.y,
+          transform: bearing === 0 ? undefined : `rotate(${bearing}deg)`,
+          transition: turning ? `transform ${MINUTE_MS}ms linear` : undefined,
+        }}
       />
       {showStatus && (
         <div className="absolute" style={{ left: badge.x, top: badge.y }}>
@@ -105,6 +125,12 @@ export interface GroupMarkerProps {
   /** Dimmed when the position is no longer current (out of contact). */
   opacity?: number;
   /**
+   * Which way the unit is pointing, in degrees clockwise from north. Taken
+   * from the track or the reported telemetry by the caller, never worked out
+   * here from where the marker used to be.
+   */
+  bearing?: number;
+  /**
    * True for a unit that is flying a pattern. The clock moves a marker once
    * per mission minute; gliding over that same minute turns a row of jumps
    * back into flight. Reduced motion switches this off at the call site, and
@@ -125,6 +151,7 @@ export function GroupMarker({
   showStatus = true,
   showLabel = true,
   opacity,
+  bearing = 0,
   moving = false,
 }: GroupMarkerProps) {
   const count = unitIds.length;
@@ -144,6 +171,8 @@ export function GroupMarker({
       suffix={suffix}
       showStatus={showStatus}
       showLabel={showLabel}
+      bearing={bearing}
+      turning={moving}
     />
   );
 

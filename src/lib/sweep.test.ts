@@ -7,11 +7,12 @@ import { searchedCoverage, type Outage } from './live';
 import {
   activeMinutes,
   bandsFor,
+  bearingOf,
   clearedPerBand,
   coveredCells,
   sectorGrid,
   sweepTally,
-  unitPosition,
+  unitTrack,
 } from './sweep';
 import type { SectorId } from '../data/types';
 
@@ -172,8 +173,8 @@ describe('a unit that stops', () => {
 
   it('stops moving, and stays where it stopped', () => {
     const band = bands[held];
-    const atLoss = unitPosition('HYD-07', band, INCIDENT.atMinute, outages);
-    const later = unitPosition('HYD-07', band, 120, outages);
+    const atLoss = unitTrack('HYD-07', band, INCIDENT.atMinute, outages);
+    const later = unitTrack('HYD-07', band, 120, outages);
 
     expect(later).toEqual(atLoss);
     expect(activeMinutes('HYD-07', 120, outages)).toBe(INCIDENT.atMinute);
@@ -184,11 +185,11 @@ describe('unit motion', () => {
   it('moves, slowly and without jumping', () => {
     const band = bandsFor('A', PLAN.A).find((one) => one.unitId === 'HYD-01')!;
 
-    let previous = unitPosition('HYD-01', band, 0, []);
+    let previous = unitTrack('HYD-01', band, 0, []);
     let moved = 0;
 
     for (let minute = 1; minute <= 120; minute += 1) {
-      const next = unitPosition('HYD-01', band, minute, []);
+      const next = unitTrack('HYD-01', band, minute, []);
       const step = Math.hypot(next.x - previous.x, next.y - previous.y);
       // Never a teleport: a minute's travel is a small part of the band.
       expect(step).toBeLessThan(band.radius * 2 + 40);
@@ -203,7 +204,7 @@ describe('unit motion', () => {
     const grid = sectorGrid('D');
     for (const band of bandsFor('D', PLAN.D)) {
       for (const minute of [0, 30, 60, 90, 120]) {
-        const point = unitPosition(band.unitId, band, minute, []);
+        const point = unitTrack(band.unitId, band, minute, []);
         expect(point.x).toBeGreaterThanOrEqual(grid.box.x - 20);
         expect(point.x).toBeLessThanOrEqual(grid.box.x + grid.box.width + 20);
         expect(point.y).toBeGreaterThanOrEqual(grid.box.y - 20);
@@ -215,12 +216,81 @@ describe('unit motion', () => {
   it('circles a fixed-wing rather than mowing with it', () => {
     const band = bandsFor('C', PLAN.C).find((one) => one.unitId === 'ROC-03')!;
     const points = [0, 15, 30, 45, 60].map((minute) =>
-      unitPosition('ROC-03', band, minute, []),
+      unitTrack('ROC-03', band, minute, []),
     );
 
     for (const point of points) {
       const radius = Math.hypot(point.x - band.centre.x, point.y - band.centre.y);
       expect(radius).toBeCloseTo(band.radius, 5);
     }
+  });
+});
+
+describe('which way a unit is pointing', () => {
+  it('reads a direction as a compass bearing off the stage', () => {
+    // The stage's y runs down, so north is negative y.
+    expect(bearingOf({ x: 0, y: -1 })).toBe(0);
+    expect(bearingOf({ x: 1, y: 0 })).toBe(90);
+    expect(bearingOf({ x: 0, y: 1 })).toBe(180);
+    expect(bearingOf({ x: -1, y: 0 })).toBe(270);
+    expect(bearingOf({ x: 0, y: 0 })).toBe(0);
+  });
+
+  it('points a unit along the leg it is flying, not across it', () => {
+    const band = bandsFor('A', PLAN.A).find((one) => one.unitId === 'HYD-01')!;
+    const off: number[] = [];
+
+    for (let minute = 0; minute <= 120; minute += 1) {
+      const here = unitTrack('HYD-01', band, minute, []);
+      const next = unitTrack('HYD-01', band, minute + 1, []);
+      const step = Math.hypot(next.x - here.x, next.y - here.y);
+      if (step < 1) continue;
+
+      // Where it actually went over the minute, against where it was pointing.
+      const went = bearingOf({ x: next.x - here.x, y: next.y - here.y });
+      off.push(Math.abs(((went - here.bearing + 540) % 360) - 180));
+    }
+
+    expect(off.length).toBeGreaterThan(60);
+
+    // Down a row the heading is the travel exactly.
+    const exact = off.filter((one) => one < 0.001).length;
+    expect(exact / off.length).toBeGreaterThan(0.9);
+
+    // The few minutes that differ are the row ends, where the minute spans
+    // two legs — so there can be no more of them than the band has corners,
+    // and the heading is still the leg the unit is on while it turns.
+    expect(off.length - exact).toBeLessThanOrEqual(band.path.length);
+  });
+
+  it('holds a steady heading down a row, rather than shivering', () => {
+    const band = bandsFor('C', PLAN.C).find((one) => one.unitId === 'HYD-14')!;
+    const headings = new Set(
+      Array.from({ length: 121 }, (_, minute) => unitTrack('HYD-14', band, minute, []).bearing),
+    );
+
+    // A lawnmower runs east, then west, and turns between rows: a handful of
+    // headings over two hours, not one per minute.
+    expect(headings.size).toBeGreaterThan(1);
+    expect(headings.size).toBeLessThan(10);
+  });
+
+  it('keeps a fixed-wing tangent to the circle it is flying', () => {
+    const band = bandsFor('C', PLAN.C).find((one) => one.unitId === 'ROC-03')!;
+
+    for (const minute of [0, 15, 30, 45, 60]) {
+      const point = unitTrack('ROC-03', band, minute, []);
+      const out = bearingOf({ x: point.x - band.centre.x, y: point.y - band.centre.y });
+      // A quarter turn clockwise of the radius it sits on, all the way round.
+      expect((point.bearing - out + 360) % 360).toBeCloseTo(90, 5);
+    }
+  });
+
+  it('holds its last heading when it stops', () => {
+    const outages: Outage[] = [{ unitIds: INCIDENT.affectedUnits, from: INCIDENT.atMinute }];
+    const band = bandsFor('B', PLAN.B).find((one) => one.unitId === 'HYD-07')!;
+
+    const atLoss = unitTrack('HYD-07', band, INCIDENT.atMinute, outages);
+    expect(unitTrack('HYD-07', band, 120, outages)).toEqual(atLoss);
   });
 });

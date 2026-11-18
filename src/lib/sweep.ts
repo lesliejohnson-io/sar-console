@@ -345,23 +345,65 @@ function along(path: readonly Point[], distance: number): Point {
 }
 
 /**
- * Where a unit is at this minute.
+ * The direction a run of waypoints is going at a given distance along it.
+ *
+ * Taken from the leg the unit is on, not from the difference between two
+ * sampled positions: a derived bearing is only as steady as the sampling, and
+ * at these speeds — a band takes two hours to mow — one minute's travel is
+ * short enough that rounding alone would make the heading wander. The leg is
+ * exact, and holds steady the whole way along it.
+ */
+function tangentAt(path: readonly Point[], distance: number): Point | null {
+  if (path.length < 2) return null;
+
+  let left = Math.max(0, distance);
+  for (let i = 1; i < path.length; i += 1) {
+    const dx = path[i].x - path[i - 1].x;
+    const dy = path[i].y - path[i - 1].y;
+    const span = Math.hypot(dx, dy);
+    if (span === 0) continue;
+    if (left <= span || i === path.length - 1) return { x: dx, y: dy };
+    left -= span;
+  }
+
+  return null;
+}
+
+/**
+ * A direction as a compass bearing: degrees clockwise from north, which on
+ * the stage is straight up. Every glyph is drawn nose-up, so this is the
+ * angle its marker is rotated by.
+ */
+export function bearingOf(direction: Point): number {
+  if (direction.x === 0 && direction.y === 0) return 0;
+  const degrees = (Math.atan2(direction.x, -direction.y) * 180) / Math.PI;
+  return (degrees + 360) % 360;
+}
+
+/** Where a unit is and which way it is pointing. */
+export interface Track extends Point {
+  /** Degrees clockwise from north. */
+  bearing: number;
+}
+
+/**
+ * Where a unit is at this minute, and which way it is pointing.
  *
  * Everything moves at a constant speed, and slowly: a band takes the whole
  * two-hour window to work, which is the same window the coverage model runs
  * on, so a unit reaching the end of its strip and the sector reaching its
  * expected coverage are the same event.
  *
- * A unit that is not searching does not move. It stays where it stopped,
- * which is what makes "holding at last known position" true on the map as
- * well as in the card.
+ * A unit that is not searching does not move, and does not turn. It stays
+ * where it stopped, on the heading it stopped on, which is what makes
+ * "holding at last known position" true on the map as well as in the card.
  */
-export function unitPosition(
+export function unitTrack(
   unitId: string,
   band: Band,
   minute: number,
   outages: readonly Outage[],
-): Point {
+): Track {
   const worked = activeMinutes(unitId, minute, outages);
   const progress = Math.min(1, worked / SEARCH_WINDOW_MINUTES);
 
@@ -372,10 +414,19 @@ export function unitPosition(
     return {
       x: band.centre.x + Math.cos(angle) * band.radius,
       y: band.centre.y + Math.sin(angle) * band.radius,
+      // Flying the circle clockwise on screen, so the nose is a quarter turn
+      // clockwise of the radius it is on.
+      bearing: bearingOf({ x: -Math.sin(angle), y: Math.cos(angle) }),
     };
   }
 
-  return along(band.path, pathLength(band.path) * progress);
+  const distance = pathLength(band.path) * progress;
+  const direction = tangentAt(band.path, distance);
+
+  return {
+    ...along(band.path, distance),
+    bearing: direction ? bearingOf(direction) : 0,
+  };
 }
 
 /* ---------------------------------------------------------------- rendering */

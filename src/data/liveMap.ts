@@ -22,47 +22,61 @@ export interface LiveMarker {
   sector: SectorId | 'ALL';
   x: number;
   y: number;
+  /**
+   * Reported heading, in degrees clockwise from north — the figure the unit
+   * sends down with its position, not one worked out from where it used to be.
+   *
+   * Every glyph is drawn nose-up, so this is also the angle the marker is
+   * rotated by: 0 points up the stage, 90 points right.
+   *
+   * **Proposed, not from Figma:** the frames draw every icon at a fixed
+   * orientation, so there was no heading in the scripted telemetry to read.
+   * These are the headings a unit holding this station would be on — a
+   * Griffin on its orbit, a Kraken into the swell — and they are flagged for
+   * design review along with the rotation itself.
+   */
+  bearing: number;
 }
 
 export const LIVE_MARKERS: LiveMarker[] = [
   // Sector A · East Cooper
-  { unitIds: ['ROC-01'], type: 'ROC', sector: 'A', x: 880, y: 255 },
-  { unitIds: ['GRF-01'], type: 'GRF', sector: 'A', x: 855, y: 189 },
-  { unitIds: ['HYD-01'], type: 'HYD', sector: 'A', x: 777, y: 307 },
-  { unitIds: ['HYD-02', 'HYD-03', 'HYD-04'], type: 'HYD', sector: 'A', x: 684, y: 400 },
-  { unitIds: ['HYD-05'], type: 'HYD', sector: 'A', x: 811, y: 264 },
-  { unitIds: ['HYD-06'], type: 'HYD', sector: 'A', x: 730, y: 346 },
+  { unitIds: ['ROC-01'], type: 'ROC', sector: 'A', x: 880, y: 255, bearing: 128 },
+  { unitIds: ['GRF-01'], type: 'GRF', sector: 'A', x: 855, y: 189, bearing: 96 },
+  { unitIds: ['HYD-01'], type: 'HYD', sector: 'A', x: 777, y: 307, bearing: 142 },
+  { unitIds: ['HYD-02', 'HYD-03', 'HYD-04'], type: 'HYD', sector: 'A', x: 684, y: 400, bearing: 150 },
+  { unitIds: ['HYD-05'], type: 'HYD', sector: 'A', x: 811, y: 264, bearing: 134 },
+  { unitIds: ['HYD-06'], type: 'HYD', sector: 'A', x: 730, y: 346, bearing: 146 },
 
   // Sector B · Peninsula
-  { unitIds: ['ROC-02'], type: 'ROC', sector: 'B', x: 561, y: 240 },
-  { unitIds: ['GRF-02'], type: 'GRF', sector: 'B', x: 512.01, y: 244.04 },
-  { unitIds: ['HYD-07'], type: 'HYD', sector: 'B', x: 531, y: 276 },
-  { unitIds: ['HYD-08'], type: 'HYD', sector: 'B', x: 488, y: 310 },
-  { unitIds: ['HYD-09'], type: 'HYD', sector: 'B', x: 544, y: 319 },
-  { unitIds: ['HYD-10'], type: 'HYD', sector: 'B', x: 596, y: 235 },
-  { unitIds: ['HYD-11'], type: 'HYD', sector: 'B', x: 574, y: 274 },
-  { unitIds: ['HYD-12'], type: 'HYD', sector: 'B', x: 476, y: 280 },
-  { unitIds: ['HYD-13'], type: 'HYD', sector: 'B', x: 488, y: 340 },
-  { unitIds: ['KRK-01'], type: 'KRK', sector: 'B', x: 613, y: 390 },
-  { unitIds: ['KRK-02'], type: 'KRK', sector: 'B', x: 533, y: 366 },
+  { unitIds: ['ROC-02'], type: 'ROC', sector: 'B', x: 561, y: 240, bearing: 104 },
+  { unitIds: ['GRF-02'], type: 'GRF', sector: 'B', x: 512.01, y: 244.04, bearing: 88 },
+  { unitIds: ['HYD-07'], type: 'HYD', sector: 'B', x: 531, y: 276, bearing: 118 },
+  { unitIds: ['HYD-08'], type: 'HYD', sector: 'B', x: 488, y: 310, bearing: 160 },
+  { unitIds: ['HYD-09'], type: 'HYD', sector: 'B', x: 544, y: 319, bearing: 96 },
+  { unitIds: ['HYD-10'], type: 'HYD', sector: 'B', x: 596, y: 235, bearing: 72 },
+  { unitIds: ['HYD-11'], type: 'HYD', sector: 'B', x: 574, y: 274, bearing: 110 },
+  { unitIds: ['HYD-12'], type: 'HYD', sector: 'B', x: 476, y: 280, bearing: 184 },
+  { unitIds: ['HYD-13'], type: 'HYD', sector: 'B', x: 488, y: 340, bearing: 172 },
+  { unitIds: ['KRK-01'], type: 'KRK', sector: 'B', x: 613, y: 390, bearing: 208 },
+  { unitIds: ['KRK-02'], type: 'KRK', sector: 'B', x: 533, y: 366, bearing: 196 },
 
   // Sector C · Sea Islands
-  { unitIds: ['ROC-03'], type: 'ROC', sector: 'C', x: 463, y: 430 },
-  { unitIds: ['GRF-03'], type: 'GRF', sector: 'C', x: 398, y: 476 },
-  { unitIds: ['HYD-14'], type: 'HYD', sector: 'C', x: 429, y: 438 },
-  { unitIds: ['HYD-15', 'HYD-16', 'HYD-17', 'HYD-18'], type: 'HYD', sector: 'C', x: 489, y: 370 },
-  { unitIds: ['HYD-19'], type: 'HYD', sector: 'C', x: 370, y: 446 },
-  { unitIds: ['HYD-20'], type: 'HYD', sector: 'C', x: 524, y: 405 },
+  { unitIds: ['ROC-03'], type: 'ROC', sector: 'C', x: 463, y: 430, bearing: 214 },
+  { unitIds: ['GRF-03'], type: 'GRF', sector: 'C', x: 398, y: 476, bearing: 248 },
+  { unitIds: ['HYD-14'], type: 'HYD', sector: 'C', x: 429, y: 438, bearing: 226 },
+  { unitIds: ['HYD-15', 'HYD-16', 'HYD-17', 'HYD-18'], type: 'HYD', sector: 'C', x: 489, y: 370, bearing: 238 },
+  { unitIds: ['HYD-19'], type: 'HYD', sector: 'C', x: 370, y: 446, bearing: 262 },
+  { unitIds: ['HYD-20'], type: 'HYD', sector: 'C', x: 524, y: 405, bearing: 204 },
 
   // Sector D · Edisto
-  { unitIds: ['ROC-04'], type: 'ROC', sector: 'D', x: 277, y: 534 },
-  { unitIds: ['GRF-04'], type: 'GRF', sector: 'D', x: 209, y: 548 },
-  { unitIds: ['HYD-21'], type: 'HYD', sector: 'D', x: 122, y: 635 },
-  { unitIds: ['HYD-22'], type: 'HYD', sector: 'D', x: 335, y: 470 },
-  { unitIds: ['HYD-23'], type: 'HYD', sector: 'D', x: 59, y: 726 },
-  { unitIds: ['HYD-24'], type: 'HYD', sector: 'D', x: 220, y: 606 },
-  { unitIds: ['KRK-03'], type: 'KRK', sector: 'D', x: 276, y: 745 },
-  { unitIds: ['KRK-04'], type: 'KRK', sector: 'D', x: 223, y: 772 },
+  { unitIds: ['ROC-04'], type: 'ROC', sector: 'D', x: 277, y: 534, bearing: 232 },
+  { unitIds: ['GRF-04'], type: 'GRF', sector: 'D', x: 209, y: 548, bearing: 256 },
+  { unitIds: ['HYD-21'], type: 'HYD', sector: 'D', x: 122, y: 635, bearing: 244 },
+  { unitIds: ['HYD-22'], type: 'HYD', sector: 'D', x: 335, y: 470, bearing: 218 },
+  { unitIds: ['HYD-23'], type: 'HYD', sector: 'D', x: 59, y: 726, bearing: 268 },
+  { unitIds: ['HYD-24'], type: 'HYD', sector: 'D', x: 220, y: 606, bearing: 250 },
+  { unitIds: ['KRK-03'], type: 'KRK', sector: 'D', x: 276, y: 745, bearing: 282 },
+  { unitIds: ['KRK-04'], type: 'KRK', sector: 'D', x: 223, y: 772, bearing: 294 },
 ];
 
 /**
@@ -101,3 +115,17 @@ export const INCIDENT_SECTOR_LABEL: Partial<Record<SectorId, { x: number; y: num
 
 /** How far a marker is dimmed when its position is no longer current. */
 export const UNTRUSTED_OPACITY = 0.45;
+
+/**
+ * The heading a unit is reporting, from the telemetry above.
+ *
+ * Read by ID rather than by marker, so a unit drawn somewhere other than the
+ * station the frame gave it — a relay crossing to another sector, a Hydra sent
+ * back to staging — still has a heading to be drawn on. Units with no
+ * telemetry row fall back to north, which is how the glyphs are drawn.
+ */
+const BEARING_BY_UNIT: Record<string, number> = Object.fromEntries(
+  LIVE_MARKERS.flatMap((marker) => marker.unitIds.map((unitId) => [unitId, marker.bearing])),
+);
+
+export const reportedBearing = (unitId: string): number => BEARING_BY_UNIT[unitId] ?? 0;
