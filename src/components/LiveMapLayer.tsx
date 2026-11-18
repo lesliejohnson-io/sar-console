@@ -5,6 +5,7 @@ import {
   INCIDENT_RING,
   INCIDENT_SECTOR_LABEL,
   LIVE_MARKERS,
+  reportedBearing,
   UNTRUSTED_OPACITY,
 } from '../data/liveMap';
 import {
@@ -17,7 +18,7 @@ import { INCIDENT } from '../data/live';
 import { SITE_GROUPS } from '../data/launchSites';
 import { UNITS_BY_ID } from '../data/assets';
 import { unitType } from '../lib/units';
-import { bandsFor, cellsPath, clearedCells, unitPosition, type Band } from '../lib/sweep';
+import { bandsFor, bearingOf, cellsPath, clearedCells, unitTrack, type Band } from '../lib/sweep';
 import { useReducedMotion } from '../lib/useReducedMotion';
 import type { Outage } from '../lib/live';
 import { GroupMarker } from './GroupMarker';
@@ -195,6 +196,12 @@ export function LiveMapLayer({
              */
             showLabel={isRelayDown || marker.unitIds.length > 1 || (lit !== null && !unlit)}
             opacity={unlit ? HIGHLIGHT_DIM : lost ? UNTRUSTED_OPACITY : undefined}
+            /*
+             * Pointed where it is going. A unit out of contact holds the
+             * heading it had when the link dropped, which is what it is
+             * actually doing: holding, not turning.
+             */
+            bearing={marker.bearing}
             label={labelFor(marker.unitIds, marker.type, lost, isRelayDown, since)}
             /*
              * A unit that is flying glides between one minute's position and
@@ -416,6 +423,12 @@ interface Placement {
   type: AssetType;
   x: number;
   y: number;
+  /**
+   * Which way the unit is pointing, in degrees clockwise from north: off its
+   * own track while it is flying a pattern, off the heading it reports while
+   * it is holding station.
+   */
+  bearing: number;
   /** Whether this marker is flying a pattern, and so should glide. */
   moving: boolean;
 }
@@ -482,6 +495,7 @@ function placements(
         type: unitType(returnedToStaging[0]),
         x: staging.x,
         y: staging.y,
+        bearing: reportedBearing(returnedToStaging[0]),
         moving: false,
       });
     }
@@ -509,6 +523,14 @@ function placements(
       type: marker.type,
       x: target ? lerp(marker.x, target.x, movingRelay!.progress) : marker.x,
       y: target ? lerp(marker.y, target.y, movingRelay!.progress) : marker.y,
+      /*
+       * On station it flies the heading it reports. Crossing to another
+       * sector it flies the leg itself, so the glyph and the dashed path
+       * point the same way.
+       */
+      bearing: target
+        ? bearingOf({ x: target.x - marker.x, y: target.y - marker.y })
+        : marker.bearing,
       moving: target !== undefined,
     });
   }
@@ -519,15 +541,25 @@ function placements(
       if (done.has(band.unitId) || !unitIds.includes(band.unitId)) continue;
       done.add(band.unitId);
 
-      const point = moving
-        ? unitPosition(band.unitId, band, minute, outages)
-        : band.centre;
+      /*
+       * The band is this unit's track, so the heading comes off the leg it is
+       * on — not off the last two positions it was drawn at, which at a band
+       * an hour long would wander by a degree or two a minute and set every
+       * marker shivering.
+       *
+       * Frozen positions mean a frozen heading too: under reduced motion the
+       * clock drives nothing, so the unit is drawn at the centre of its strip
+       * on the heading it reports rather than one that turns as time passes.
+       */
+      const track = unitTrack(band.unitId, band, minute, outages);
+      const point = moving ? track : band.centre;
 
       placed.push({
         unitIds: [band.unitId],
         type: unitType(band.unitId),
         x: point.x - GLYPH_CENTRE.x,
         y: point.y - GLYPH_CENTRE.y,
+        bearing: moving ? track.bearing : reportedBearing(band.unitId),
         moving,
       });
     }
