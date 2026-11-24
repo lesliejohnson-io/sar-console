@@ -3,11 +3,12 @@ import { SECTORS_BY_ID } from '../data/sectors';
 import { formatUnitRange, groupByType } from '../lib/units';
 import { LiveCoverageBar } from './LiveCoverageBar';
 import { PriorityBadge } from './PriorityBadge';
-import { SectorLockButton } from './SectorLockButton';
+import { RailPanel, RailRow } from './RailRow';
+import { LockIndicator, LockToggle } from './SectorLock';
 import { UnitRow } from './UnitRow';
-import { OperatorSetGroup, operatorNote } from './SectorSection';
+import { OperatorSetGroup, operatorNote, rowDomId } from './SectorSection';
 import type { SectorLive } from '../store/useLiveStore';
-import type { Assignments } from '../store/usePlanStore';
+import { sectorSelection, type Assignments, type RailSelection } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
 
 export interface LiveSectorSectionProps {
@@ -19,9 +20,13 @@ export interface LiveSectorSectionProps {
   outOfContact: string[];
   /** The amber card, when this sector has something the operator must decide. */
   flag?: ReactNode;
-  /** Units the autonomy may not re-task. */
-  lockedUnits: string[];
+  /** The autonomy may not re-task this sector. */
+  locked: boolean;
   onToggleLock: (sectorId: SectorId) => void;
+  onPause: (sectorId: SectorId) => void;
+  /** The one selected row in the rail, which may or may not be in this sector. */
+  selection: RailSelection | null;
+  onSelect: (next: RailSelection, rowElementId: string) => void;
 }
 
 /**
@@ -40,9 +45,15 @@ export function LiveSectorSection({
   live,
   outOfContact,
   flag,
-  lockedUnits,
+  locked,
   onToggleLock,
+  onPause,
+  selection,
+  onSelect,
 }: LiveSectorSectionProps) {
+  const header = sectorSelection(sectorId);
+  const headerSelected = selection?.key === header.key;
+  const headerRowId = rowDomId(header.key);
   const sector = SECTORS_BY_ID[sectorId];
   const groups = groupByType(unitIds);
 
@@ -53,23 +64,46 @@ export function LiveSectorSection({
 
   const status = statusOf(live, outOfContact, unitIds.length);
 
-  const rowsFor = (ids: string[], type: (typeof groups)[number]['type']) => {
+  /*
+   * A live row selects (and lights its units on the map) but does not expand:
+   * nothing can be re-tasked mid-flight in this demo, so there are no options
+   * to show beneath it.
+   */
+  const rowsFor = (ids: string[], type: (typeof groups)[number]['type'], source: string) => {
     const detail = detailFor(ids, live.stopped, outOfContact);
+    const key = `units:${sectorId}:${type}:${source}`;
     return (
       <UnitRow
         label={formatUnitRange(ids)}
         type={type}
         detailOverride={detail}
         detailFlagged={detail !== undefined}
+        rowId={rowDomId(key)}
+        selected={selection?.key === key}
+        expandable={false}
+        onToggle={(id) => onSelect({ key, sector: sectorId, unitIds: ids }, id)}
       />
     );
   };
 
   return (
-    <div className="flex w-full shrink-0 flex-col items-start gap-[2px] rounded-[6px] border border-surface-card bg-surface-card px-[6px] pt-[5px] pb-[6px]">
-      <div className="flex h-[30px] w-full items-center gap-[4px] pl-[9px]">
+    <div
+      className={`flex w-full shrink-0 flex-col items-start gap-[2px] rounded-[6px] border bg-surface-card px-[6px] pt-[5px] pb-[6px] ${
+        selection?.sector === sectorId ? 'border-text-primary' : 'border-surface-card'
+      }`}
+    >
+      <RailRow
+        rowId={headerRowId}
+        labelledBy={`${headerRowId}-title`}
+        selected={headerSelected}
+        onToggle={(id) => onSelect(header, id)}
+        contentClassName="h-[30px] gap-[4px] pr-[5px] pl-[9px]"
+      >
         {/* A heading, so the rail can be navigated sector by sector. */}
-        <h3 className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">
+        <h3
+          id={`${headerRowId}-title`}
+          className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary"
+        >
           {sector.label}
         </h3>
         <PriorityBadge priority={sector.priority} />
@@ -85,12 +119,29 @@ export function LiveSectorSection({
             {status.label}
           </p>
         </div>
-        <SectorLockButton
-          sectorLabel={sector.label}
-          locked={unitIds.length > 0 && unitIds.every((id) => lockedUnits.includes(id))}
-          onToggle={() => onToggleLock(sectorId)}
-        />
-      </div>
+        {locked && <LockIndicator />}
+      </RailRow>
+
+      {headerSelected && (
+        <RailPanel rowId={headerRowId} label={`${sector.label} controls`}>
+          <div className="flex w-full flex-col items-start gap-[6px]">
+            <LockToggle
+              sectorId={sectorId}
+              locked={locked}
+              onToggle={() => onToggleLock(sectorId)}
+            />
+            {/* Frame copy, from the incident card's "always available" row. */}
+            <button
+              type="button"
+              onClick={() => onPause(sectorId)}
+              disabled={live.paused || unitIds.length === 0}
+              className="flex shrink-0 cursor-pointer items-center rounded-[3px] border border-interaction-primary px-[8px] py-[3px] text-[12px] font-semibold whitespace-nowrap text-interaction-primary disabled:cursor-default disabled:border-border-subtle disabled:text-text-secondary"
+            >
+              {live.paused ? `Sector ${sectorId} paused` : `Pause Sector ${sectorId}`}
+            </button>
+          </div>
+        </RailPanel>
+      )}
 
       <LiveCoverageBar
         searched={live.searched}
@@ -118,11 +169,11 @@ export function LiveSectorSection({
 
         return (
           <div key={group.type} className="contents">
-            {autonomySet.length > 0 && rowsFor(autonomySet, group.type)}
+            {autonomySet.length > 0 && rowsFor(autonomySet, group.type, 'autonomy')}
             {operatorSet.length > 0 && (
               <OperatorSetGroup
                 note={operatorNote(assignments, operatorSet)}
-                rows={rowsFor(operatorSet, group.type)}
+                rows={rowsFor(operatorSet, group.type, 'operator')}
               />
             )}
           </div>

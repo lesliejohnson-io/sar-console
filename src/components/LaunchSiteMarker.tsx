@@ -1,5 +1,5 @@
 import { MARKER } from '../data/mapGeometry';
-import { MarkerFace } from './GroupMarker';
+import { MarkerFace, markerTitle } from './GroupMarker';
 import type { SiteGroup } from '../data/launchSites';
 import type { Unit } from '../data/types';
 
@@ -11,7 +11,8 @@ import type { Unit } from '../data/types';
  * looks like itself from the moment the operator first sees it to the moment
  * it is flying a sector.
  *
- * The maintenance pair carry a tooltip; the rest are just there.
+ * The maintenance pair open the unavailable tooltip; the rest name their
+ * state in a plain hover tooltip.
  */
 export function LaunchSiteMarker({
   group,
@@ -37,7 +38,14 @@ export function LaunchSiteMarker({
 
   if (!onHover) {
     return (
-      <div className="absolute" style={position}>
+      <div
+        className="absolute"
+        style={position}
+        title={markerTitle(
+          units.map((unit) => unit.id),
+          units[0].status,
+        )}
+      >
         {face}
       </div>
     );
@@ -45,7 +53,7 @@ export function LaunchSiteMarker({
 
   /*
    * Dimmed while it sits there, full strength while the operator is on it:
-   * the legend already reads "Dimmed = position not current", and these two
+   * the state key already reads "Dimmed = position not current", and these two
    * are not going anywhere.
    */
   return (

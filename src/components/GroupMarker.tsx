@@ -2,7 +2,8 @@ import { MARKER } from '../data/mapGeometry';
 import { MINUTE_MS } from '../data/live';
 import { badgeAt, BADGE_SIZE, glyphBox, LABEL_HEIGHT, labelTop } from '../lib/markers';
 import { unitNumber } from '../lib/units';
-import { StateBadge } from './StateBadge';
+import { StateBadge, STATE_NAME } from './StateBadge';
+import { formatUnitRange } from '../lib/units';
 import type { AssetType, UnitStatus } from '../data/types';
 import glyphRoc from '../assets/icons/glyph-roc.svg';
 import glyphHyd from '../assets/icons/glyph-hyd.svg';
@@ -136,7 +137,17 @@ export interface GroupMarkerProps {
    * the global `prefers-reduced-motion` rule cancels the transition anyway.
    */
   moving?: boolean;
+  /**
+   * The hover tooltip. It names the state in words, so a glyph the operator
+   * does not know can be read at the marker without opening the key. Defaults
+   * to the units and their state.
+   */
+  title?: string;
 }
+
+/** "HYD-21–24 · Ready": the units, then their state in words. */
+export const markerTitle = (unitIds: readonly string[], status: UnitStatus): string =>
+  `${formatUnitRange(unitIds)} · ${STATE_NAME[status]}`;
 
 export function GroupMarker({
   type,
@@ -152,7 +163,9 @@ export function GroupMarker({
   opacity,
   bearing = 0,
   moving = false,
+  title,
 }: GroupMarkerProps) {
+  const tooltip = title ?? markerTitle(unitIds, status);
   const count = unitIds.length;
   const suffix = count === 1 ? padded(unitIds[0]) : `×${count}`;
   const position = {
@@ -177,7 +190,12 @@ export function GroupMarker({
 
   if (!onExpand) {
     return (
-      <div className="absolute" style={position} aria-hidden={!label || undefined}>
+      <div
+        className="absolute"
+        style={position}
+        title={tooltip}
+        aria-hidden={!label || undefined}
+      >
         {label && <span className="sr-only">{label}</span>}
         {face}
       </div>
@@ -189,6 +207,7 @@ export function GroupMarker({
       type="button"
       className="absolute cursor-pointer rounded-[6px]"
       style={position}
+      title={tooltip}
       aria-expanded={expanded}
       aria-label={
         label ??

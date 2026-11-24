@@ -55,7 +55,7 @@ export function OverviewMap({
     <div
       role="region"
       aria-label="Mission map: search area, sectors and launch sites"
-      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
+      className="absolute inset-0 overflow-hidden bg-map-backdrop"
       style={{ width: STAGE.width, height: STAGE.height }}
       onClick={() => onSelectSector(null)}
     >

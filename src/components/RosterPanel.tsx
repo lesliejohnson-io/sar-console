@@ -1,5 +1,6 @@
 import { ROSTER_META, ROSTER_ORDER, UNITS_BY_ID, unitsOfType } from '../data/assets';
 import { PANEL, ROSTER, UNAVAILABLE_TOOLTIP } from '../data/mapGeometry';
+import { RailScrollbar, useRailScroll } from './RailScrollbar';
 import { RosterCard } from './RosterCard';
 import { UnavailableTooltip } from './UnavailableTooltip';
 import type { AssetType } from '../data/types';
@@ -37,81 +38,82 @@ export function RosterPanel({
   // started on the map is answered beside the marker it came from.
   const hovered = hover?.from === 'rail' ? UNITS_BY_ID[hover.unitId] : undefined;
 
-  return (
-    <>
-      <div
-        className="absolute rounded-[10px] border border-border-subtle bg-surface-panel shadow-panel"
-        style={{ left: PANEL.x, top: PANEL.y, width: PANEL.width, height: PANEL.height }}
-      />
+  const { ref, metrics } = useRailScroll<HTMLDivElement>();
 
+  return (
+    /*
+     * The rail fills its container: the full height of the window, beside
+     * the map. See `ConsoleShell`. It does not clip, because the unavailable
+     * tooltip opens out of it to the left, over the map.
+     */
+    <div className="absolute inset-0 flex flex-col border-l border-border-subtle bg-surface-panel shadow-panel">
       <div
-        className="absolute flex items-center overflow-hidden rounded-tr-[8px] border-t border-r border-b border-border-subtle pl-[14px]"
-        style={{ left: PANEL.x, top: PANEL.y, width: PANEL.width, height: PANEL.titleHeight }}
+        className="flex shrink-0 items-center overflow-hidden border-b border-border-subtle pl-[14px]"
+        style={{ height: PANEL.titleHeight }}
       >
         <h2 className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase">
           Asset roster
         </h2>
       </div>
 
-      <div
-        className={`absolute ${proposing ? 'opacity-60' : ''}`}
-        style={{
-          left: ROSTER.content.x,
-          top: ROSTER.content.y,
-          width: ROSTER.content.width,
-          height: PANEL.height - PANEL.titleHeight,
-        }}
-      >
+      {/*
+       * The cards scroll and the action does not, as on the other two rails:
+       * in a short window the roster runs past the fold, and `PROPOSE TASKING`
+       * keeps the foot of the rail.
+       */}
+      <div className={`relative min-h-0 flex-1 ${proposing ? 'opacity-60' : ''}`}>
         <div
-          className="absolute flex items-center gap-[12px] pl-[15px]"
-          style={{
-            left: ROSTER.columns.x,
-            top: ROSTER.columns.y,
-            width: ROSTER.columns.width,
-            height: ROSTER.columns.height,
-          }}
+          ref={ref}
+          className="absolute inset-0 overflow-x-hidden overflow-y-auto [scrollbar-width:none]"
         >
-          <p className="w-[77px] shrink-0 text-[11px] text-text-secondary">Unit</p>
-          <p className="w-[96px] shrink-0 text-[11px] text-text-secondary">Status · site</p>
-          <p className="min-w-px flex-1 text-[11px] text-text-secondary">Endurance · link</p>
+          <div className="relative w-full" style={{ height: ROSTER.cardsHeight }}>
+            <div
+              className="absolute flex items-center gap-[12px] pl-[15px]"
+              style={{
+                left: ROSTER.columns.x,
+                top: ROSTER.columns.y,
+                width: ROSTER.columns.width,
+                height: ROSTER.columns.height,
+              }}
+            >
+              <p className="w-[77px] shrink-0 text-[11px] text-text-secondary">Unit</p>
+              <p className="w-[96px] shrink-0 text-[11px] text-text-secondary">Status · site</p>
+              <p className="min-w-px flex-1 text-[11px] text-text-secondary">Endurance · link</p>
+            </div>
+
+            {ROSTER_ORDER.map((type) => (
+              <RosterCard
+                key={type}
+                type={type}
+                hovered={hoveredType === type}
+                onHover={onHoverType}
+                hover={hover}
+                onUnitHover={onUnitHover}
+              />
+            ))}
+          </div>
         </div>
 
-        {ROSTER_ORDER.map((type) => (
-          <RosterCard
-            key={type}
-            type={type}
-            hovered={hoveredType === type}
-            onHover={onHoverType}
-            hover={hover}
-            onUnitHover={onUnitHover}
-          />
-        ))}
+        <RailScrollbar metrics={metrics} style={{ right: 4, top: 16, bottom: 10 }} />
+      </div>
 
+      <div
+        className={`flex shrink-0 flex-col items-center pt-[4px] pr-[14px] pb-[8px] pl-[4px] ${
+          proposing ? 'opacity-60' : ''
+        }`}
+      >
         {empty && (
-          <p
-            className="absolute w-full text-center text-[12px] text-text-secondary"
-            style={{ top: ROSTER.hint.y }}
-          >
+          <p className="pb-[8px] text-center text-[12px] text-text-secondary">
             Draw at least one sector to propose tasking
           </p>
         )}
 
-        <div
-          className="absolute flex flex-col items-center px-[6px] py-[4px]"
-          style={{
-            left: ROSTER.footer.x,
-            top: ROSTER.footer.y,
-            width: ROSTER.footer.width,
-            height: ROSTER.footer.height,
-          }}
-        >
+        <div className="flex h-[44px] w-full flex-col items-center px-[6px] py-[4px]">
           <button
             type="button"
             onClick={onPropose}
             className={`flex h-[40px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-[3px] ${
-              empty
-                ? 'border border-border-subtle bg-surface-card'
-                : 'bg-interaction-primary'
+              empty ? 'border border-border-subtle bg-surface-card' : 'bg-interaction-primary'
             }`}
           >
             <span
@@ -130,15 +132,15 @@ export function RosterPanel({
           title={`${hovered.id} · Unavailable`}
           detail={hovered.unavailableDetail}
           expectedBack={hovered.expectedBack ?? ''}
-          x={PANEL.x - UNAVAILABLE_TOOLTIP.width}
-          y={rowCentre(hovered.id) - UNAVAILABLE_TOOLTIP.height / 2}
+          x={-UNAVAILABLE_TOOLTIP.width}
+          y={rowCentre(hovered.id) - metrics.scrollTop - UNAVAILABLE_TOOLTIP.height / 2}
         />
       )}
-    </>
+    </div>
   );
 }
 
-/** Where a given unit's roster row sits in the stage, measured to its middle. */
+/** Where a given unit's roster row sits in the rail, measured to its middle. */
 function rowCentre(unitId: string): number {
   const type = UNITS_BY_ID[unitId].type;
   const units = unitsOfType(type);
@@ -150,5 +152,5 @@ function rowCentre(unitId: string): number {
   const note = ROSTER_META[type].collapse ? 18 : 0;
 
   const top = 5 + 30 + 2 + note + (before + index) * 30;
-  return ROSTER.content.y + ROSTER.cardTop[type] + top + ROSTER.row.height / 2;
+  return PANEL.titleHeight + ROSTER.cardTop[type] + top + ROSTER.row.height / 2;
 }

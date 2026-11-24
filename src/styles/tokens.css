@@ -43,18 +43,22 @@
    */
   --color-feedback-info: #c3d3d8;
   /*
-   * The page behind the console. The live screen fills the window, so this
-   * shows only in the band left over when the map's aspect does not match the
-   * viewport's; black keeps the stage reading as the lit thing on the desk.
+   * The page behind the console: black. The console fills the window, so it
+   * shows only if something fails to cover its box.
    */
   --color-surface-void: #000000;
-  --color-map-backdrop: #252528;
+  /*
+   * The ocean, sampled from the map raster. The patch over the raster's baked
+   * label uses it, and so does everything under the map: the plane is pinned
+   * top-left, so any room the map does not fill is to the east and south,
+   * which is open water.
+   */
   --color-map-patch: #233941;
+  --color-map-backdrop: var(--color-map-patch);
 
   /* Elevation, as the frame draws it. Figma has no variables for these. */
   --shadow-top-bar: 0px 8px 24px 0px rgb(0 0 0 / 0.5);
   --shadow-panel: 0px 10px 28px 0px rgb(0 0 0 / 0.55);
-  --shadow-legend: 0px 6px 20px 0px rgb(0 0 0 / 0.45);
   --drop-shadow-marker: 2px 2px 1.5px rgb(0 0 0 / 0.5);
 
   --font-sans: 'Lato', system-ui, sans-serif;

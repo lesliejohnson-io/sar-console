@@ -3,10 +3,11 @@ import { PANEL, RAIL_FOOTER_HEIGHT } from '../data/mapGeometry';
 import { SECTORS } from '../data/sectors';
 import { formatUnitRange } from '../lib/units';
 import { LiveSectorSection } from './LiveSectorSection';
+import { useRailSelection } from './RailRow';
 import { RailScrollbar, useRailScroll } from './RailScrollbar';
 import { UnitRow } from './UnitRow';
 import type { SectorLive } from '../store/useLiveStore';
-import type { Assignments } from '../store/usePlanStore';
+import type { Assignments, RailSelection } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
 
 export interface SectorStatusPanelProps {
@@ -19,8 +20,11 @@ export interface SectorStatusPanelProps {
   flags: Partial<Record<SectorId, ReactNode>>;
   holding: boolean;
   onToggleHold: () => void;
-  lockedUnits: string[];
+  lockedSectors: SectorId[];
   onToggleLock: (sectorId: SectorId) => void;
+  onPause: (sectorId: SectorId) => void;
+  selection: RailSelection | null;
+  onSelect: (next: RailSelection | null) => void;
 }
 
 /**
@@ -32,9 +36,9 @@ export interface SectorStatusPanelProps {
  * the only thing the operator can do to all of it at once is stop it, so the
  * button is drawn as the quiet one.
  *
- * Unlike the other two rails this one fills its container rather than placing
- * itself on the stage: on the live screen it is as tall as the window, and the
- * sectors scroll inside it while the hold stays on screen. See `LiveShell`.
+ * Like the other two rails it fills its container: it is as tall as the
+ * window, and the sectors scroll inside it while the hold stays on screen. See
+ * `ConsoleShell`.
  */
 export function SectorStatusPanel({
   assignments,
@@ -45,10 +49,14 @@ export function SectorStatusPanel({
   flags,
   holding,
   onToggleHold,
-  lockedUnits,
+  lockedSectors,
   onToggleLock,
+  onPause,
+  selection,
+  onSelect,
 }: SectorStatusPanelProps) {
   const { ref, metrics } = useRailScroll<HTMLDivElement>();
+  const select = useRailSelection(ref, selection, onSelect);
 
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden border-l border-border-subtle bg-surface-panel shadow-panel">
@@ -76,12 +84,6 @@ export function SectorStatusPanel({
           ref={ref}
           className="absolute inset-0 flex flex-col items-start gap-[8px] overflow-x-hidden overflow-y-auto py-[8px] pr-[14px] pl-[4px] [scrollbar-width:none]"
         >
-          <div className="flex w-full shrink-0 items-start overflow-hidden px-[12px] py-[2px]">
-            <p className="min-w-px flex-1 text-[12px] text-text-secondary">
-              Bar: searched so far · tick: where the plan expects to be now
-            </p>
-          </div>
-
           <section className="flex w-full shrink-0 flex-col items-start gap-[2px] overflow-hidden rounded-[4px] px-[6px] pb-[2px]">
             <div className="relative h-[26px] w-full">
               <p className="absolute top-[5px] left-[9px] text-[14px] font-semibold whitespace-nowrap text-text-primary">
@@ -91,7 +93,7 @@ export function SectorStatusPanel({
                 Relay over every sector
               </p>
             </div>
-            <UnitRow label={formatUnitRange(relayUnits)} type="GRF" showLockSlot={false} />
+            <UnitRow label={formatUnitRange(relayUnits)} type="GRF" />
           </section>
 
           {SECTORS.map((sector) => (
@@ -103,8 +105,11 @@ export function SectorStatusPanel({
               live={live[sector.id]}
               outOfContact={outOfContact}
               flag={flags[sector.id]}
-              lockedUnits={lockedUnits}
+              locked={lockedSectors.includes(sector.id)}
               onToggleLock={onToggleLock}
+              onPause={onPause}
+              selection={selection}
+              onSelect={select}
             />
           ))}
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import {
   MISSION_TIME,
   PROPOSED_ASSIGNMENTS,
-  PROPOSED_LOCKED_UNITS,
+  PROPOSED_LOCKED_SECTORS,
   PROPOSED_SELECTED_SECTOR,
   PROPOSED_STAGED,
 } from '../data/plan';
@@ -15,13 +15,38 @@ import type { Assignment, AssignmentTarget, SectorId } from '../data/types';
 
 export type Assignments = Record<string, Assignment>;
 
+/**
+ * The one row selected in the rail, if any: a sector header, a group row, or a
+ * single unit. Selecting is the same gesture at every level, and it is what
+ * the map highlights, so the rail and the map can never disagree about what
+ * the operator is looking at.
+ *
+ * `key` names the row (`sector:D`, `group:D:HYD:autonomy`, `unit:HYD-21`);
+ * `unitIds` are the units it stands for, empty for a sector header.
+ */
+export interface RailSelection {
+  key: string;
+  sector: SectorId;
+  unitIds: string[];
+}
+
+/** The selection a sector header makes. */
+export const sectorSelection = (sector: SectorId): RailSelection => ({
+  key: `sector:${sector}`,
+  sector,
+  unitIds: [],
+});
+
 export interface PlanState {
   assignments: Assignments;
   /** Sectors the operator has staged for launch. */
   staged: Record<SectorId, boolean>;
-  /** Units the autonomy may not move on re-propose. */
-  lockedUnits: string[];
+  /** Sectors the autonomy may not re-task on re-propose. */
+  lockedSectors: SectorId[];
+  /** The sector the selection is in; the map's selected sector. */
   selectedSector: SectorId | null;
+  /** The selected rail row, which is also the one expanded. */
+  selection: RailSelection | null;
   /**
    * The sectors that actually went up, captured at the moment of launch.
    * `null` until the operator launches: Screen 3 has nothing to show before
@@ -32,9 +57,10 @@ export interface PlanState {
 
   /** Move one unit to another sector and mark it set by the operator. */
   moveUnit: (unitId: string, toSector: SectorId) => void;
-  selectSector: (sector: SectorId | null) => void;
+  /** Select a rail row (and so its sector), or clear the selection. */
+  select: (selection: RailSelection | null) => void;
   setStaged: (sector: SectorId, staged: boolean) => void;
-  /** Lock or unlock every unit in a sector against autonomy re-proposal. */
+  /** Lock or unlock a sector against autonomy re-proposal. */
   toggleSectorLock: (sector: SectorId) => void;
   /**
    * Hand the plan back to the autonomy, keeping what the operator owns.
@@ -53,8 +79,9 @@ const initial = () => ({
     PROPOSED_ASSIGNMENTS.map((assignment) => [assignment.unitId, { ...assignment }]),
   ) as Assignments,
   staged: { ...PROPOSED_STAGED },
-  lockedUnits: [...PROPOSED_LOCKED_UNITS],
+  lockedSectors: [...PROPOSED_LOCKED_SECTORS],
   selectedSector: PROPOSED_SELECTED_SECTOR as SectorId | null,
+  selection: sectorSelection(PROPOSED_SELECTED_SECTOR) as RailSelection | null,
   launched: null as SectorId[] | null,
 });
 
@@ -92,39 +119,34 @@ export const usePlanStore = create<PlanState>((set) => ({
       };
     }),
 
-  selectSector: (sector) => set({ selectedSector: sector }),
+  select: (selection) => set({ selection, selectedSector: selection?.sector ?? null }),
 
   setStaged: (sector, staged) =>
     set((state) => ({ staged: { ...state.staged, [sector]: staged } })),
 
   /*
-   * A lock says the autonomy may not move these units when it re-proposes
-   * (`spec.md`: "Lock an asset or a sector, so the autonomy won't change it on
-   * re-propose"). It is not a lock against the operator: the whole point of
-   * the screen is that a person can always override, so dragging a locked unit
-   * still works and simply makes it theirs.
+   * A lock says the autonomy may not re-task this sector when it re-proposes:
+   * nothing in it is taken out, and nothing is sent in. Locks are by sector
+   * only — a unit is never locked on its own, it is locked by being in a
+   * locked sector.
    *
-   * The sector's button is all-or-nothing — it locks what is there now, and
-   * unlocks if everything already is.
+   * It is not a lock against the operator: the whole point of the screen is
+   * that a person can always override, so dragging a unit in or out of a
+   * locked sector still works.
    */
   toggleSectorLock: (sector) =>
-    set((state) => {
-      const units = unitsIn(state.assignments, sector);
-      if (units.length === 0) return state;
-
-      const allLocked = units.every((id) => state.lockedUnits.includes(id));
-      return {
-        lockedUnits: allLocked
-          ? state.lockedUnits.filter((id) => !units.includes(id))
-          : [...state.lockedUnits, ...units.filter((id) => !state.lockedUnits.includes(id))],
-      };
-    }),
+    set((state) => ({
+      lockedSectors: state.lockedSectors.includes(sector)
+        ? state.lockedSectors.filter((id) => id !== sector)
+        : [...state.lockedSectors, sector],
+    })),
 
   /*
    * Re-proposing asks the autonomy for its plan again. Two kinds of
    * assignment survive it, which is what the popover lists under "Keeps": a
-   * locked unit, and a unit the operator placed themselves. Everything else in
-   * scope goes back to what the autonomy proposed.
+   * unit in a locked sector, and a unit the operator placed themselves. Nor is
+   * anything sent into a locked sector. Everything else in scope goes back to
+   * what the autonomy proposed.
    *
    * Every sector it touches returns to "Stage sector", because the plan the
    * operator staged is not the plan any more.
@@ -141,6 +163,7 @@ export const usePlanStore = create<PlanState>((set) => ({
         const current = assignments[proposed.unitId];
         if (!inScope(current?.target) && !inScope(proposed.target)) continue;
         if (keptByOperator(state, proposed.unitId)) continue;
+        if (isLocked(state.lockedSectors, proposed.target)) continue;
 
         if (current?.target !== proposed.target) {
           if (current && current.target !== 'ALL') touched.add(current.target);
@@ -159,11 +182,11 @@ export const usePlanStore = create<PlanState>((set) => ({
 
   clearPlan: () =>
     set((state) => {
-      // Locked units are the operator saying "not this one", which a clear
+      // A locked sector is the operator saying "leave this one", which a clear
       // has no more right to overrule than the autonomy does.
       const assignments = Object.fromEntries(
-        Object.entries(state.assignments).filter(([unitId]) =>
-          state.lockedUnits.includes(unitId),
+        Object.entries(state.assignments).filter(([, assignment]) =>
+          isLocked(state.lockedSectors, assignment.target),
         ),
       ) as Assignments;
 
@@ -176,15 +199,30 @@ export const usePlanStore = create<PlanState>((set) => ({
       };
     }),
 
+  /*
+   * Launching lets go of whatever the review had selected: a mission opens
+   * with nothing picked out, rather than carrying a planning choice onto the
+   * live map and fading every other unit behind it.
+   */
   launch: () =>
-    set((state) => ({ launched: SECTOR_IDS.filter((id) => state.staged[id]) })),
+    set((state) => ({
+      launched: SECTOR_IDS.filter((id) => state.staged[id]),
+      selection: null,
+      selectedSector: null,
+    })),
 
   reset: () => set(initial()),
 }));
 
-/** A unit the autonomy may not re-task: locked, or placed by the operator. */
-const keptByOperator = (state: PlanState, unitId: string): boolean =>
-  state.lockedUnits.includes(unitId) || state.assignments[unitId]?.source === 'operator';
+/** Whether an assignment target is a sector the operator has locked. */
+export const isLocked = (lockedSectors: SectorId[], target: AssignmentTarget | undefined) =>
+  target !== undefined && target !== 'ALL' && lockedSectors.includes(target);
+
+/** A unit the autonomy may not re-task: in a locked sector, or placed by the operator. */
+const keptByOperator = (state: PlanState, unitId: string): boolean => {
+  const assignment = state.assignments[unitId];
+  return isLocked(state.lockedSectors, assignment?.target) || assignment?.source === 'operator';
+};
 
 /* ---------------------------------------------------------------- selectors */
 
@@ -211,7 +249,7 @@ export interface RePropose {
  */
 export function rePropoPreview(
   assignments: Assignments,
-  lockedUnits: string[],
+  lockedSectors: SectorId[],
   scope: SectorId | 'all',
 ): RePropose {
   const sectors = scope === 'all' ? [...SECTOR_IDS] : [scope];
@@ -221,7 +259,7 @@ export function rePropoPreview(
   );
 
   const locked = assigned
-    .filter((assignment) => lockedUnits.includes(assignment.unitId))
+    .filter((assignment) => isLocked(lockedSectors, assignment.target))
     .map((assignment) => assignment.unitId)
     .sort(byUnitId);
 
@@ -230,7 +268,7 @@ export function rePropoPreview(
   const operator = assigned
     .filter(
       (assignment) =>
-        assignment.source === 'operator' && !lockedUnits.includes(assignment.unitId),
+        assignment.source === 'operator' && !isLocked(lockedSectors, assignment.target),
     )
     .map((assignment) => assignment.unitId)
     .sort(byUnitId);

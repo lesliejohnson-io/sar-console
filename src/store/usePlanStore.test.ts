@@ -7,6 +7,7 @@ import {
   stagedCount,
   unitsIn,
   rePropoPreview,
+  sectorSelection,
   usePlanStore,
   weakest,
   type Assignments,
@@ -173,28 +174,32 @@ const proposedTarget = (unitId: string) =>
   PROPOSED_ASSIGNMENTS.find((one) => one.unitId === unitId)!.target;
 
 describe('locking a sector', () => {
-  it('locks every unit in it, and unlocks them again', () => {
-    const units = unitsIn(plan().assignments, 'A');
-    expect(units.length).toBeGreaterThan(0);
+  it('opens with nothing locked', () => {
+    expect(plan().lockedSectors).toEqual([]);
+  });
+
+  it('locks the sector itself, and unlocks it again', () => {
+    plan().toggleSectorLock('A');
+    expect(plan().lockedSectors).toEqual(['A']);
 
     plan().toggleSectorLock('A');
-    expect(units.every((id) => plan().lockedUnits.includes(id))).toBe(true);
-
-    plan().toggleSectorLock('A');
-    expect(units.some((id) => plan().lockedUnits.includes(id))).toBe(false);
+    expect(plan().lockedSectors).toEqual([]);
   });
 
   it('leaves other sectors alone', () => {
-    const before = [...plan().lockedUnits];
     plan().toggleSectorLock('A');
-
-    const b = unitsIn(plan().assignments, 'B');
-    expect(b.filter((id) => plan().lockedUnits.includes(id))).toEqual(
-      b.filter((id) => before.includes(id)),
-    );
+    expect(plan().lockedSectors).not.toContain('B');
   });
 
-  it('does not stop the operator moving a locked unit', () => {
+  it('stays locked when the operator moves a unit in or out', () => {
+    plan().toggleSectorLock('B');
+    plan().toggleSectorLock('D');
+    plan().moveUnit('KRK-03', 'D');
+
+    expect(plan().lockedSectors).toEqual(['B', 'D']);
+  });
+
+  it('does not stop the operator moving a unit out of a locked sector', () => {
     plan().toggleSectorLock('B');
     plan().moveUnit('KRK-03', 'D');
 
@@ -224,13 +229,26 @@ describe('re-proposing', () => {
     expect(plan().assignments['KRK-03'].source).toBe('operator');
   });
 
-  it('keeps a locked unit even when the autonomy wants it elsewhere', () => {
+  it('keeps a unit in a locked sector even when the autonomy wants it elsewhere', () => {
     usePlanStore.setState({
       assignments: {
         ...plan().assignments,
         'HYD-01': { unitId: 'HYD-01', target: 'D', source: 'autonomy' },
       },
-      lockedUnits: [...plan().lockedUnits, 'HYD-01'],
+      lockedSectors: ['D'],
+    });
+
+    plan().rePropose('all');
+    expect(plan().assignments['HYD-01'].target).toBe('D');
+  });
+
+  it('sends nothing into a locked sector', () => {
+    usePlanStore.setState({
+      assignments: {
+        ...plan().assignments,
+        'HYD-01': { unitId: 'HYD-01', target: 'D', source: 'autonomy' },
+      },
+      lockedSectors: ['A'],
     });
 
     plan().rePropose('all');
@@ -277,32 +295,36 @@ describe('re-proposing', () => {
 });
 
 describe('the re-propose preview', () => {
-  it('counts what the demo opens with: nothing kept but the locked units', () => {
-    const preview = rePropoPreview(plan().assignments, plan().lockedUnits, 'all');
-    const locked = preview.keeps.find((group) => group.reason === 'locked');
+  it('counts what the demo opens with: nothing kept, every unit may change', () => {
+    const preview = rePropoPreview(plan().assignments, plan().lockedSectors, 'all');
 
-    expect(locked?.unitIds).toEqual([...plan().lockedUnits].sort());
-    expect(preview.mayChange).toBe(
-      Object.keys(plan().assignments).length - plan().lockedUnits.length,
-    );
+    expect(preview.keeps).toEqual([]);
+    expect(preview.mayChange).toBe(Object.keys(plan().assignments).length);
   });
 
-  it('matches frame 160:694 after the move the demo is about', () => {
+  it('keeps every unit in a locked sector', () => {
+    plan().toggleSectorLock('D');
+    const preview = rePropoPreview(plan().assignments, plan().lockedSectors, 'all');
+
+    expect(preview.keeps).toEqual([
+      { unitIds: unitsIn(plan().assignments, 'D'), reason: 'locked' },
+    ]);
+  });
+
+  it('keeps the operator\'s move after the move the demo is about', () => {
     plan().moveUnit('KRK-03', 'D');
     plan().moveUnit('KRK-04', 'D');
 
-    const preview = rePropoPreview(plan().assignments, plan().lockedUnits, 'all');
-    expect(preview.keeps.map((group) => group.reason)).toEqual(['locked', 'operator']);
-    expect(preview.keeps[0].unitIds).toEqual(['HYD-21', 'HYD-22', 'HYD-23', 'HYD-24']);
-    expect(preview.keeps[1].unitIds).toEqual(['KRK-03', 'KRK-04']);
-    expect(preview.mayChange).toBe(30);
+    const preview = rePropoPreview(plan().assignments, plan().lockedSectors, 'all');
+    expect(preview.keeps).toEqual([{ unitIds: ['KRK-03', 'KRK-04'], reason: 'operator' }]);
+    expect(preview.mayChange).toBe(34);
   });
 
   it('lists a unit that is both locked and operator-set once, as locked', () => {
     plan().moveUnit('KRK-03', 'D');
-    usePlanStore.setState({ lockedUnits: [...plan().lockedUnits, 'KRK-03'] });
+    plan().toggleSectorLock('D');
 
-    const preview = rePropoPreview(plan().assignments, plan().lockedUnits, 'all');
+    const preview = rePropoPreview(plan().assignments, plan().lockedSectors, 'all');
     const named = preview.keeps.flatMap((group) => group.unitIds);
     expect(named.filter((id) => id === 'KRK-03')).toHaveLength(1);
     expect(preview.keeps.find((g) => g.reason === 'locked')!.unitIds).toContain('KRK-03');
@@ -310,7 +332,7 @@ describe('the re-propose preview', () => {
 
   it('promises exactly what re-proposing then does', () => {
     plan().moveUnit('KRK-03', 'D');
-    const preview = rePropoPreview(plan().assignments, plan().lockedUnits, 'all');
+    const preview = rePropoPreview(plan().assignments, plan().lockedSectors, 'all');
     const kept = preview.keeps.flatMap((group) => group.unitIds);
     const before = Object.fromEntries(
       Object.values(plan().assignments).map((one) => [one.unitId, one.target]),
@@ -325,10 +347,17 @@ describe('the re-propose preview', () => {
 });
 
 describe('clearing the plan', () => {
-  it('takes every unlocked unit off tasking', () => {
+  it('takes every unit off tasking when nothing is locked', () => {
     plan().clearPlan();
-    const left = Object.keys(plan().assignments);
-    expect(left.sort()).toEqual([...plan().lockedUnits].sort());
+    expect(Object.keys(plan().assignments)).toEqual([]);
+  });
+
+  it('leaves a locked sector as it was', () => {
+    const d = unitsIn(plan().assignments, 'D');
+    plan().toggleSectorLock('D');
+    plan().clearPlan();
+
+    expect(Object.keys(plan().assignments).sort()).toEqual([...d].sort());
   });
 
   it('unstages every sector, so nothing can launch on an empty plan', () => {
@@ -338,8 +367,8 @@ describe('clearing the plan', () => {
   });
 
   it('is undone by re-proposing', () => {
-    // Compared as a map of unit to sector: the locked units survive the clear
-    // and so come back in a different order, which is not a difference.
+    // Compared as a map of unit to sector: re-proposing puts units back in a
+    // different order, which is not a difference.
     const targets = () =>
       Object.fromEntries(
         Object.values(plan().assignments).map((one) => [one.unitId, one.target]),
@@ -349,5 +378,29 @@ describe('clearing the plan', () => {
     plan().clearPlan();
     plan().rePropose('all');
     expect(targets()).toEqual(before);
+  });
+});
+
+describe('selecting a rail row', () => {
+  it('opens with Sector D selected, as frame 158:572 draws it', () => {
+    expect(plan().selection).toEqual(sectorSelection('D'));
+    expect(plan().selectedSector).toBe('D');
+  });
+
+  it('selects the sector a unit row is in, so the map follows the rail', () => {
+    plan().select({ key: 'unit:KRK-01', sector: 'B', unitIds: ['KRK-01'] });
+    expect(plan().selectedSector).toBe('B');
+  });
+
+  it('clears the selected sector along with the selection', () => {
+    plan().select(null);
+    expect(plan().selection).toBeNull();
+    expect(plan().selectedSector).toBeNull();
+  });
+
+  it('lets go of the selection when the plan launches', () => {
+    plan().launch();
+    expect(plan().selection).toBeNull();
+    expect(plan().selectedSector).toBeNull();
   });
 });

@@ -2,17 +2,16 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EventFeed } from '../components/EventFeed';
 import { IncidentCard } from '../components/IncidentCard';
-import { Legend } from '../components/Legend';
 import { LiveFlagCard } from '../components/LiveFlagCard';
 import { LiveMapLayer } from '../components/LiveMapLayer';
 import { LiveRegion } from '../components/LiveRegion';
-import { LiveShell, CHROME } from '../components/LiveShell';
+import { CHROME, ConsoleShell } from '../components/ConsoleShell';
 import { LiveTopBar } from '../components/LiveTopBar';
-import { RestartDemo } from '../components/RestartDemo';
 import { SectorStatusPanel } from '../components/SectorStatusPanel';
 import { BEHIND_TOLERANCE, INCIDENT, MINUTE_MS } from '../data/live';
 import { SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
 import { coverage } from '../lib/coverage';
+import { NO_ATTENTION, type Attention } from '../lib/attention';
 import { formatUnitRange, unitType } from '../lib/units';
 import {
   clock,
@@ -41,9 +40,8 @@ import type { SectorId } from '../data/types';
  * `/live?at=incident` opens two minutes into the relay loss, which is the
  * moment frame 289:2394 draws.
  *
- * This is the one screen that does not sit on the fixed stage: a mission being
- * watched fills the window, with the rail at full height beside it. See
- * `LiveShell`.
+ * Like every screen it fills the window, with the rail at full height beside
+ * the map. See `ConsoleShell`.
  */
 export function Live() {
   const navigate = useNavigate();
@@ -53,8 +51,10 @@ export function Live() {
   const assignments = usePlanStore((state) => state.assignments);
   const launched = usePlanStore((state) => state.launched);
   const selectedSector = usePlanStore((state) => state.selectedSector);
+  const selection = usePlanStore((state) => state.selection);
+  const select = usePlanStore((state) => state.select);
   const resetPlan = usePlanStore((state) => state.reset);
-  const lockedUnits = usePlanStore((state) => state.lockedUnits);
+  const lockedSectors = usePlanStore((state) => state.lockedSectors);
   const toggleSectorLock = usePlanStore((state) => state.toggleSectorLock);
 
   const live = useLiveStore();
@@ -113,6 +113,12 @@ export function Live() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectEvent]);
 
+  const restart = () => {
+    resetPlan();
+    live.reset();
+    navigate('/overview');
+  };
+
   const phase = incidentPhase(live);
   const unresolved = phase === 'deciding' || phase === 'in-progress';
 
@@ -127,11 +133,13 @@ export function Live() {
           inContact={availableCount()}
           available={availableCount()}
           box={CHROME.header}
+          attention={NO_ATTENTION}
+          onRestart={restart}
         />
         <section
           aria-labelledby="live-title"
           className="absolute flex flex-col gap-[8px] rounded-[10px] border border-border-subtle bg-surface-panel p-[21px] shadow-panel"
-          style={{ left: CHROME.header.left, top: 85, width: 460 }}
+          style={{ left: CHROME.header.left, top: CHROME.header.top + CHROME.headerHeight + 12, width: 460 }}
         >
           {/* No Figma frame for this state — copy proposed, flagged for review. */}
           <h2
@@ -152,15 +160,6 @@ export function Live() {
             BACK TO THE PLAN
           </button>
         </section>
-        <Legend box={CHROME.legend} />
-        <RestartDemo
-          box={CHROME.restart}
-          onRestart={() => {
-            resetPlan();
-            live.reset();
-            navigate('/overview');
-          }}
-        />
       </div>
     );
   }
@@ -286,8 +285,33 @@ export function Live() {
 
   const stoppages = outages(live, unitsBySector);
 
+  /*
+   * The header's status strip, counted from exactly what the screen draws:
+   * a sector needs the operator when the rail is showing it a flag card, the
+   * relay is degraded while the map badges it so, and out of contact is the
+   * same list the map dims.
+   */
+  const relayDown = incidentApplies && phase !== 'none';
+  const attention: Attention = {
+    'needs-operator': Object.values(flags).filter(Boolean).length,
+    degraded: relayDown && relayUnits.includes(INCIDENT.relayUnit) ? 1 : 0,
+    'out-of-contact': lost.length,
+  };
+
+  /*
+   * What the rail has selected, lit on the map the way a feed line is: a unit
+   * row lights its units, a sector header lights the sector and everything
+   * flying in it.
+   */
+  const railHighlight = selection
+    ? {
+        units: selection.unitIds.length > 0 ? selection.unitIds : unitsBySector[selection.sector],
+        sector: selection.sector,
+      }
+    : null;
+
   return (
-    <LiveShell
+    <ConsoleShell
       map={
         <LiveMapLayer
           unitsBySector={unitsBySector}
@@ -297,7 +321,7 @@ export function Live() {
           minute={live.minute}
           outages={stoppages}
           incidentOpen={incidentOpen}
-          relayDown={incidentApplies && phase !== 'none'}
+          relayDown={relayDown}
           since={since}
           movingRelay={
             live.resolution === 'a' && live.resolvedFrom !== null
@@ -311,7 +335,7 @@ export function Live() {
             live.resolution === 'b' && phase === 'resolved' ? INCIDENT.affectedUnits : []
           }
           selectedSector={selectedSector}
-          highlight={highlighted(live, unitsBySector)}
+          highlight={railHighlight ?? highlighted(live, unitsBySector)}
         />
       }
       chrome={
@@ -323,6 +347,8 @@ export function Live() {
             inContact={inContact}
             available={availableCount()}
             box={CHROME.header}
+            attention={attention}
+            onRestart={restart}
           />
 
           <EventFeed
@@ -330,7 +356,11 @@ export function Live() {
             hidden={live.feedHidden}
             onToggle={live.toggleFeed}
             selected={live.selectedEvent}
-            onSelect={live.selectEvent}
+            onSelect={(key) => {
+              // One thing selected at a time: picking a feed line lets go of the rail.
+              if (key !== null) select(null);
+              live.selectEvent(key);
+            }}
             box={CHROME.feed}
             incident={
               incidentOpen ? (
@@ -355,15 +385,6 @@ export function Live() {
             }
           />
 
-          <Legend box={CHROME.legend} />
-          <RestartDemo
-            box={CHROME.restart}
-            onRestart={() => {
-              resetPlan();
-              live.reset();
-              navigate('/overview');
-            }}
-          />
           <LiveRegion message={announcement} />
           <Announcer
             phase={phase}
@@ -384,8 +405,15 @@ export function Live() {
           flags={flags}
           holding={live.heldAllAt !== null}
           onToggleHold={live.toggleHoldAll}
-          lockedUnits={lockedUnits}
+          lockedSectors={lockedSectors}
           onToggleLock={toggleSectorLock}
+          onPause={live.pauseSector}
+          selection={selection}
+          onSelect={(next) => {
+            // ...and picking a rail row lets go of the feed line.
+            if (next !== null) live.selectEvent(null);
+            select(next);
+          }}
         />
       }
     />

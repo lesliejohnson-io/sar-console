@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Legend } from '../components/Legend';
+import { CHROME, DesktopOnly } from '../components/ConsoleShell';
 import { LiveRegion } from '../components/LiveRegion';
 import { PriorityBadge } from './../components/PriorityBadge';
-import { Stage } from '../components/Stage';
 import { TopBar } from '../components/TopBar';
 import { UnitRow } from '../components/UnitRow';
 import { MISSION_TIME } from '../data/plan';
 import { SECTORS, SECTORS_BY_ID, SECTOR_IDS } from '../data/sectors';
 import { formatUnitRange, groupByType } from '../lib/units';
+import { planAttention } from '../lib/attention';
+import { AVAILABLE_UNITS } from '../data/assets';
 import {
   availableCount,
   coverageBySector,
@@ -68,79 +69,94 @@ export function LaunchSummary() {
   }, [launch, navigate]);
 
   return (
-    <Stage>
-      <div className="absolute inset-0 bg-surface-app" />
-
-      <TopBar
-        overall={overall(assignments)}
-        weakest={weakest(assignments)}
-        weakestPercent={coverage[weakest(assignments)]}
-        unassigned={unassignedCount(assignments)}
-        available={availableCount()}
-      />
-
-      <section
-        aria-labelledby="launch-summary-title"
-        className="absolute flex flex-col overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel shadow-panel"
-        style={{ left: 9, top: 85, width: 1422, height: 896 }}
-      >
-        <header className="flex h-[61px] shrink-0 items-center gap-[12px] border-b border-border-subtle px-[21px]">
-          <h2
-            id="launch-summary-title"
-            className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase"
-          >
-            Review and launch
-          </h2>
-          <p className="text-[12px] whitespace-nowrap text-text-secondary">
-            {launching} units · {stagedSectors.length} of {SECTOR_IDS.length} sectors · {MISSION_TIME}
-          </p>
-        </header>
-
-        <div className="grid min-h-px flex-1 auto-rows-min grid-cols-2 items-start gap-[12px] overflow-y-auto p-[16px]">
-          <RelayCard unitIds={relayUnits} />
-
-          {SECTORS.map((sector) => (
-            <SectorCard
-              key={sector.id}
-              sectorId={sector.id}
-              assignments={assignments}
-              unitIds={unitsIn(assignments, sector.id)}
-              percent={coverage[sector.id]}
-              staged={staged[sector.id]}
-              onStage={handleStage}
-            />
-          ))}
-        </div>
-
-        <footer className="flex h-[64px] shrink-0 items-center justify-end gap-[12px] border-t border-border-subtle px-[16px]">
-          {heldSectors.length > 0 && (
-            <p className="mr-auto text-[12px] text-status-needs-operator">
-              {formatSectorList(heldSectors)} will not launch.
-            </p>
+    /*
+     * No map and no rail here, but the step fills the window like every other
+     * screen, so the console does not shrink back into a frame between the
+     * plan and the launch.
+     */
+    <DesktopOnly>
+      <div className="relative h-screen w-screen overflow-hidden bg-surface-app">
+        <TopBar
+          overall={overall(assignments)}
+          weakest={weakest(assignments)}
+          weakestPercent={coverage[weakest(assignments)]}
+          unassigned={unassignedCount(assignments)}
+          available={availableCount()}
+          box={CHROME.header}
+          attention={planAttention(
+            coverage,
+            AVAILABLE_UNITS.map((unit) => unit.status),
           )}
-          <button
-            type="button"
-            onClick={() => navigate('/review')}
-            className="flex h-[40px] cursor-pointer items-center justify-center rounded-[3px] px-[16px] text-[12px] font-semibold text-text-secondary hover:bg-surface-card hover:text-text-primary"
-          >
-            Back to plan
-          </button>
-          <button
-            type="button"
-            onClick={handleLaunch}
-            disabled={stagedSectors.length === 0}
-            className="flex h-[40px] w-[280px] cursor-pointer items-center justify-center rounded-[3px] bg-interaction-primary px-[8px] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="text-[14px] font-medium whitespace-nowrap text-text-on-interaction">
-              LAUNCH · {stagedCount(staged)} SECTORS
-            </span>
-          </button>
-        </footer>
-      </section>
+        />
 
-      <Legend />
-      <LiveRegion message={announcement} />
-    </Stage>
+        <section
+          aria-labelledby="launch-summary-title"
+          className="absolute flex flex-col overflow-hidden border border-border-subtle bg-surface-panel shadow-panel"
+          style={{
+            left: CHROME.header.left,
+            right: CHROME.header.right,
+            top: CHROME.header.top + CHROME.headerHeight + 12,
+            bottom: CHROME.header.top,
+          }}
+        >
+          <header className="flex h-[61px] shrink-0 items-center gap-[12px] border-b border-border-subtle px-[21px]">
+            <h2
+              id="launch-summary-title"
+              className="text-[14px] font-black whitespace-nowrap text-text-primary uppercase"
+            >
+              Review and launch
+            </h2>
+            <p className="text-[12px] whitespace-nowrap text-text-secondary">
+              {launching} units · {stagedSectors.length} of {SECTOR_IDS.length} sectors ·{' '}
+              {MISSION_TIME}
+            </p>
+          </header>
+
+          <div className="grid min-h-px flex-1 auto-rows-min grid-cols-2 items-start gap-[12px] overflow-y-auto p-[16px]">
+            <RelayCard unitIds={relayUnits} />
+
+            {SECTORS.map((sector) => (
+              <SectorCard
+                key={sector.id}
+                sectorId={sector.id}
+                assignments={assignments}
+                unitIds={unitsIn(assignments, sector.id)}
+                percent={coverage[sector.id]}
+                staged={staged[sector.id]}
+                onStage={handleStage}
+              />
+            ))}
+          </div>
+
+          <footer className="flex h-[64px] shrink-0 items-center justify-end gap-[12px] border-t border-border-subtle px-[16px]">
+            {heldSectors.length > 0 && (
+              <p className="mr-auto text-[12px] text-status-needs-operator">
+                {formatSectorList(heldSectors)} will not launch.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/review')}
+              className="flex h-[40px] cursor-pointer items-center justify-center rounded-[3px] px-[16px] text-[12px] font-semibold text-text-secondary hover:bg-surface-card hover:text-text-primary"
+            >
+              Back to plan
+            </button>
+            <button
+              type="button"
+              onClick={handleLaunch}
+              disabled={stagedSectors.length === 0}
+              className="flex h-[40px] w-[280px] cursor-pointer items-center justify-center rounded-[3px] bg-interaction-primary px-[8px] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="text-[14px] font-medium whitespace-nowrap text-text-on-interaction">
+                LAUNCH · {stagedCount(staged)} SECTORS
+              </span>
+            </button>
+          </footer>
+        </section>
+
+        <LiveRegion message={announcement} />
+      </div>
+    </DesktopOnly>
   );
 }
 
@@ -156,14 +172,10 @@ function RelayCard({ unitIds }: { unitIds: string[] }) {
   return (
     <article className="flex flex-col items-start gap-[2px] rounded-[6px] border border-border-subtle bg-surface-card px-[6px] pt-[5px] pb-[6px]">
       <div className="flex h-[30px] w-full items-center gap-[8px] pl-[9px]">
-        <p className="text-[14px] font-semibold whitespace-nowrap text-text-primary">
-          All sectors
-        </p>
-        <p className="text-[12px] whitespace-nowrap text-text-secondary">
-          Relay over every sector
-        </p>
+        <p className="text-[14px] font-semibold whitespace-nowrap text-text-primary">All sectors</p>
+        <p className="text-[12px] whitespace-nowrap text-text-secondary">Relay over every sector</p>
       </div>
-      <UnitRow label={formatUnitRange(unitIds)} type="GRF" showLockSlot={false} />
+      <UnitRow label={formatUnitRange(unitIds)} type="GRF" />
     </article>
   );
 }
@@ -226,12 +238,8 @@ function SectorCard({
 
       <div className={`flex w-full flex-col items-start ${staged ? '' : 'opacity-60'}`}>
         {groupByType(unitIds).map((group) => {
-          const operatorSet = group.unitIds.filter(
-            (id) => assignments[id].source === 'operator',
-          );
-          const autonomySet = group.unitIds.filter(
-            (id) => assignments[id].source === 'autonomy',
-          );
+          const operatorSet = group.unitIds.filter((id) => assignments[id].source === 'operator');
+          const autonomySet = group.unitIds.filter((id) => assignments[id].source === 'autonomy');
 
           return (
             <div key={group.type} className="contents">

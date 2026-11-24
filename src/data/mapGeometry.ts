@@ -25,22 +25,10 @@ export const OCEAN_LABEL = { x: 927, y: 809, lines: ['Atlantic', 'Ocean'] };
 
 export const TOP_BAR = { x: 9, y: 12, width: 1030, height: 61 };
 export const STAT_BAR = { x: 444, y: 12, height: 61 };
-export const LEGEND = { x: 9, y: 989, width: 1030, height: 34 };
 export const PANEL = { x: 1047, y: 12, width: 384, titleHeight: 61, height: 1007 };
 
 /** The band at the foot of the rail that holds the one action on every screen. */
 export const RAIL_FOOTER_HEIGHT = 52;
-
-/**
- * Where the rail's drawn scrollbar sits, in stage coordinates. It is a sibling
- * of the scrolling list rather than a child of it: drawn inside, it scrolled
- * away with the content it was describing.
- */
-export const RAIL_SCROLLBAR = {
-  left: PANEL.x + PANEL.width - 8,
-  top: PANEL.y + PANEL.titleHeight + 16,
-  height: PANEL.height - PANEL.titleHeight - RAIL_FOOTER_HEIGHT - 26,
-};
 
 /** Map label for each sector: the anchor is the left edge, centred vertically. */
 export const SECTOR_LABEL_POS: Record<SectorId, { x: number; y: number }> = {
@@ -64,6 +52,9 @@ export const RELAY_LABEL_POS = { x: 140, y: 150, lines: ['ALL SECTORS', 'COMMS R
  * ground. `lib/markers.test.ts` holds the two to that relationship.
  */
 export const MARKER = { width: 52, height: 44, step: 66.96, icon: 12 };
+
+/** How far a unit not in the current selection fades on the map. */
+export const HIGHLIGHT_DIM = 0.3;
 
 /**
  * The point inside the box that a symbol is centred on — and that a marker is
@@ -138,20 +129,18 @@ export const UNAVAILABLE_TOOLTIP = { width: 216, height: 72 };
 export const DRAW_CARD = { x: 330, y: 560, width: 380 };
 
 /**
- * The asset roster, in the rail's own coordinates. Cards are placed by their
- * top edge and take whatever height their rows give them, which reproduces the
- * frame's 221 / 89 / 161 / 161 exactly.
+ * The asset roster, in the rail's own coordinates below its title bar. Cards
+ * are placed by their top edge and take whatever height their rows give them,
+ * which reproduces the frame's 221 / 89 / 161 / 161 exactly. The action sits
+ * in its own band at the foot of the rail, so the cards scroll above it.
  */
 export const ROSTER = {
-  /** Where the rail's content starts, below the title bar. */
-  content: { x: PANEL.x, y: PANEL.y + PANEL.titleHeight, width: PANEL.width },
   columns: { x: 4, y: 8, width: 366, height: 19 },
   card: { x: 4, width: 366 },
   cardTop: { ROC: 35, HYD: 264, GRF: 361, KRK: 530 } as Record<string, number>,
   row: { height: 28 },
-  footer: { x: 4, y: 894, width: 366, height: 44 },
-  /** The empty state's "Draw at least one sector…" line, above the button. */
-  hint: { y: 872 },
+  /** The last card's foot plus the gap the frame keeps below a card. */
+  cardsHeight: 530 + 161 + 8,
 };
 
 /* ------------------------------------------- Screen 3 · Tasking live */
@@ -164,7 +153,7 @@ export const ROSTER = {
  */
 
 /**
- * The event feed. Anchored by its bottom edge, just above the legend, so it
+ * The event feed. Anchored by its bottom edge, at the foot of the map, so it
  * grows upward as the incident card opens inside it — which is what the two
  * frames draw (top 809 without the card, 612 with it, the same bottom).
  */
@@ -173,20 +162,21 @@ export const LIVE_FEED = { x: 580, width: 459, bottom: STAGE.height - 974 };
 /** How much brighter searched ground is than the sector's own wash. */
 export const SEARCHED_FILL_OPACITY = 0.34;
 
-/* ------------------------------------------- Screen 3 · the live shell */
+/* --------------------------------------------------- the console shell */
 /*
- * Screen 3 does not sit on the fixed stage the other screens do.
- *
- * The stage scales the whole console as one picture, which is right for a plan
- * being reviewed: the frame is the thing. A mission being watched is different
- * — the rail has to be reachable and the header has to be where the operator's
- * eye already is, whatever window the console is open in. So on this screen
- * the rail and the chrome are laid out in real pixels and only the map plane
- * scales, filling whatever is left.
+ * No screen sits on a fixed, letterboxed stage. The rail and the chrome are
+ * laid out in real pixels and only the map plane scales, filling whatever is
+ * left beside the rail. See `ConsoleShell`.
  *
  * **Flagged for design review:** the frames are drawn at 1440 x 1035 and have
  * nothing to say about other window sizes.
  */
+
+/**
+ * The part of the stage the frames show beside the rail. The map plane is
+ * scaled so its height fills the map area, which is exactly 1:1 at 1440 x 1035.
+ */
+export const MAP_VIEW = { width: PANEL.x, height: STAGE.height };
 
 /** The gutter the chrome keeps from the edges of the map area. */
 export const LIVE_SHELL = {
@@ -194,25 +184,11 @@ export const LIVE_SHELL = {
   /** The header's fixed offset from the top of the window, at any size. */
   headerTop: TOP_BAR.y,
   headerHeight: TOP_BAR.height,
-  legendHeight: LEGEND.height,
+  /**
+   * The header's second row: the status strip, and the demo's own control.
+   * No frame draws it; flagged for design review.
+   */
+  stripHeight: 30,
   /** The rail: fixed width, full window height. */
   railWidth: PANEL.width,
-};
-
-/** The top bar's own box on the fixed stage, for Screens 1 and 2. */
-export const TOP_BAR_BOX = {
-  left: TOP_BAR.x,
-  top: TOP_BAR.y,
-  width: TOP_BAR.width,
-  height: TOP_BAR.height,
-};
-
-/**
- * Where the row of readings sits *inside* the bar. Measured from the bar's own
- * top-left, so the bar can be placed anywhere — on the stage at (9, 12), or
- * stretched across the map area on the live screen.
- */
-export const TOP_BAR_STAT = {
-  reviewX: STAT_BAR.x - TOP_BAR.x,
-  overviewX: OVERVIEW_STAT_BAR.x - TOP_BAR.x,
 };

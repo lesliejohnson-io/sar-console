@@ -1,4 +1,11 @@
-import { MARKER, MARKER_ANCHOR, SEARCHED_FILL_OPACITY, SECTOR_LABEL_POS, STAGE } from '../data/mapGeometry';
+import {
+  HIGHLIGHT_DIM,
+  MARKER,
+  MARKER_ANCHOR,
+  SEARCHED_FILL_OPACITY,
+  SECTOR_LABEL_POS,
+  STAGE,
+} from '../data/mapGeometry';
 import {
   INCIDENT_AFFECTED_LABEL,
   INCIDENT_RELAY_LABEL,
@@ -17,17 +24,14 @@ import { SECTORS } from '../data/sectors';
 import { INCIDENT } from '../data/live';
 import { SITE_GROUPS } from '../data/launchSites';
 import { UNITS_BY_ID } from '../data/assets';
-import { unitType } from '../lib/units';
+import { formatUnitRange, unitType } from '../lib/units';
 import { bandsFor, bearingOf, cellsPath, clearedCells, unitTrack, type Band } from '../lib/sweep';
 import { useReducedMotion } from '../lib/useReducedMotion';
 import type { Outage } from '../lib/live';
-import { GroupMarker } from './GroupMarker';
+import { GroupMarker, markerTitle } from './GroupMarker';
 import { MapBackdrop } from './MapBackdrop';
 import type { SectorLive } from '../store/useLiveStore';
 import type { AssetType, SectorId, UnitStatus } from '../data/types';
-
-/** How far a marker steps back while a feed line picks out other units. */
-const HIGHLIGHT_DIM = 0.3;
 
 export interface LiveMapLayerProps {
   unitsBySector: Record<SectorId, string[]>;
@@ -108,7 +112,7 @@ export function LiveMapLayer({
     <div
       role="region"
       aria-label="Mission map: sectors, searched ground and live unit positions"
-      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
+      className="absolute inset-0 overflow-hidden bg-map-backdrop"
       style={{ width: STAGE.width, height: STAGE.height }}
     >
       <MapBackdrop />
@@ -203,6 +207,7 @@ export function LiveMapLayer({
              */
             bearing={marker.bearing}
             label={labelFor(marker.unitIds, marker.type, lost, isRelayDown, since)}
+            title={titleFor(marker.unitIds, lost, isRelayDown, since)}
             /*
              * A unit that is flying glides between one minute's position and
              * the next, so the pattern reads as a pattern rather than a
@@ -599,6 +604,17 @@ function statusOf(unitIds: string[], lost: boolean, relayDown: boolean): UnitSta
   if (lost) return 'out-of-contact';
   if (relayDown) return 'degraded';
   return UNITS_BY_ID[unitIds[0]]?.status ?? 'ready';
+}
+
+/**
+ * The hover tooltip: the state in words, and for a unit out of contact the
+ * reason it is dimmed, so the operator never needs the key to read a marker.
+ */
+function titleFor(unitIds: string[], lost: boolean, relayDown: boolean, since: number): string {
+  const units = formatUnitRange(unitIds);
+  if (lost) return `${units} · Out of contact ${since} min · position not current`;
+  if (relayDown) return `${units} · Degraded · relay link lost`;
+  return markerTitle(unitIds, statusOf(unitIds, lost, relayDown));
 }
 
 /** What a screen reader hears, since the map's own labels stay off. */

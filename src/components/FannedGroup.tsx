@@ -19,14 +19,17 @@ const GAP = 4;
 const PAD = 6;
 const PER_ROW = 4;
 
-/** The map, less the top bar, the legend and the tasking rail. */
-const BOUNDS = { left: 8, top: 80, right: 1039, bottom: 975 };
+/** The map, less the header (both rows) and the tasking rail. */
+const BOUNDS = { left: 8, top: 112, right: 1039, bottom: 1023 };
 
 export function FannedGroup({
   unitIds,
   anchor,
+  highlight = null,
 }: {
   unitIds: string[];
+  /** The units selected in the rail; the others in the tray fade. */
+  highlight?: Set<string> | null;
   /** The group marker's own top-left, in stage coordinates. */
   anchor: { x: number; y: number };
 }) {
@@ -57,6 +60,7 @@ export function FannedGroup({
         <UnitMarker
           key={unitId}
           unitId={unitId}
+          dimmed={highlight !== null && !highlight.has(unitId)}
           x={PAD + (index % PER_ROW) * (MARKER.width + GAP)}
           y={PAD + Math.floor(index / PER_ROW) * (MARKER.height + GAP)}
         />

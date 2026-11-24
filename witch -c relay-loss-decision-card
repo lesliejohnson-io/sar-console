@@ -1,0 +1,837 @@
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/EventFeed.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/FannedGroup.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/GroupMarker.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/LaunchSiteMarker.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/LiveMapLayer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/LiveSectorSection.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/LiveTopBar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/MapLayer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/OverviewMap.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/OverviewTopBar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/RePropoPopover.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/RestartDemo.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/RosterPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/SectorSection.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/SectorStatusPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/StateBadge.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/TaskingPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/TopBar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/UnitMarker.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/UnitRow.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/data/mapGeometry.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/data/plan.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/routes/LaunchSummary.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/routes/Live.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/routes/Overview.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/routes/Review.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/usePlanStore.test.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/usePlanStore.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/styles/tokens.css', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex a4d699a..95e1adc 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -2,3 +2,5 @@[m [mnode_modules[m
+ dist[m
+ *.local[m
+ .DS_Store[m
+[32m+[m[32m/docs[m
+[32m+[m[32mCLAUDE.md[m
+\ No newline at end of file[m
+[1mdiff --git a/src/assets/map/raster.png b/src/assets/map/raster.png[m
+[1mindex f1a01d4..01f9f16 100644[m
+Binary files a/src/assets/map/raster.png and b/src/assets/map/raster.png differ
+[1mdiff --git a/src/components/EventFeed.tsx b/src/components/EventFeed.tsx[m
+[1mindex 0eaddbe..a1e0d30 100644[m
+[1m--- a/src/components/EventFeed.tsx[m
+[1m+++ b/src/components/EventFeed.tsx[m
+[36m@@ -14,7 +14,7 @@[m [mconst FEED_BOX: CSSProperties = {[m
+  *[m
+  * It sits on the map rather than in the rail, and it is anchored by its bottom[m
+  * edge: an open incident makes the card grow upward out of the feed instead of[m
+[31m- * pushing the feed down over the legend. Timestamps are mission clock, in the[m
+[32m+[m[32m * pushing the feed down off the screen. Timestamps are mission clock, in the[m
+  * mono face, so a column of times stays a column.[m
+  */[m
+ export function EventFeed({[m
+[36m@@ -40,7 +40,7 @@[m [mexport function EventFeed({[m
+   return ([m
+     <section[m
+       aria-label="Event feed"[m
+[31m-      className="absolute flex flex-col items-start overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel pt-[10px] pr-[14px] pb-[8px] pl-[14px] shadow-top-bar"[m
+[32m+[m[32m      className="absolute flex flex-col items-start overflow-hidden border border-border-subtle bg-surface-panel pt-[10px] pr-[14px] pb-[8px] pl-[14px] shadow-top-bar"[m
+       style={box}[m
+     >[m
+       <div className={`flex w-full items-start overflow-hidden ${hidden ? '' : 'pb-[6px]'}`}>[m
+[1mdiff --git a/src/components/FannedGroup.tsx b/src/components/FannedGroup.tsx[m
+[1mindex 809c46a..693da08 100644[m
+[1m--- a/src/components/FannedGroup.tsx[m
+[1m+++ b/src/components/FannedGroup.tsx[m
+[36m@@ -19,14 +19,17 @@[m [mconst GAP = 4;[m
+ const PAD = 6;[m
+ const PER_ROW = 4;[m
+ [m
+[31m-/** The map, less the top bar, the legend and the tasking rail. */[m
+[31m-const BOUNDS = { left: 8, top: 80, right: 1039, bottom: 975 };[m
+[32m+[m[32m/** The map, less the header (both rows) and the tasking rail. */[m
+[32m+[m[32mconst BOUNDS = { left: 8, top: 112, right: 1039, bottom: 1023 };[m
+ [m
+ export function FannedGroup({[m
+   unitIds,[m
+   anchor,[m
+[32m+[m[32m  highlight = null,[m
+ }: {[m
+   unitIds: string[];[m
+[32m+[m[32m  /** The units selected in the rail; the others in the tray fade. */[m
+[32m+[m[32m  highlight?: Set<string> | null;[m
+   /** The group marker's own top-left, in stage coordinates. */[m
+   anchor: { x: number; y: number };[m
+ }) {[m
+[36m@@ -57,6 +60,7 @@[m [mexport function FannedGroup({[m
+         <UnitMarker[m
+           key={unitId}[m
+           unitId={unitId}[m
+[32m+[m[32m          dimmed={highlight !== null && !highlight.has(unitId)}[m
+           x={PAD + (index % PER_ROW) * (MARKER.width + GAP)}[m
+           y={PAD + Math.floor(index / PER_ROW) * (MARKER.height + GAP)}[m
+         />[m
+[1mdiff --git a/src/components/GroupMarker.tsx b/src/components/GroupMarker.tsx[m
+[1mindex 3048dc1..8f65813 100644[m
+[1m--- a/src/components/GroupMarker.tsx[m
+[1m+++ b/src/components/GroupMarker.tsx[m
+[36m@@ -2,7 +2,8 @@[m [mimport { MARKER } from '../data/mapGeometry';[m
+ import { MINUTE_MS } from '../data/live';[m
+ import { badgeAt, BADGE_SIZE, glyphBox, LABEL_HEIGHT, labelTop } from '../lib/markers';[m
+ import { unitNumber } from '../lib/units';[m
+[31m-import { StateBadge } from './StateBadge';[m
+[32m+[m[32mimport { StateBadge, STATE_NAME } from './StateBadge';[m
+[32m+[m[32mimport { formatUnitRange } from '../lib/units';[m
+ import type { AssetType, UnitStatus } from '../data/types';[m
+ import glyphRoc from '../assets/icons/glyph-roc.svg';[m
+ import glyphHyd from '../assets/icons/glyph-hyd.svg';[m
+[36m@@ -136,8 +137,18 @@[m [mexport interface GroupMarkerProps {[m
+    * the global `prefers-reduced-motion` rule cancels the transition anyway.[m
+    */[m
+   moving?: boolean;[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * The hover tooltip. It names the state in words, so a glyph the operator[m
+[32m+[m[32m   * does not know can be read at the marker without opening the key. Defaults[m
+[32m+[m[32m   * to the units and their state.[m
+[32m+[m[32m   */[m
+[32m+[m[32m  title?: string;[m
+ }[m
+ [m
+[32m+[m[32m/** "HYD-21–24 · Ready": the units, then their state in words. */[m
+[32m+[m[32mexport const markerTitle = (unitIds: readonly string[], status: UnitStatus): string =>[m
+[32m+[m[32m  `${formatUnitRange(unitIds)} · ${STATE_NAME[status]}`;[m
+[32m+[m
+ export function GroupMarker({[m
+   type,[m
+   unitIds,[m
+[36m@@ -152,7 +163,9 @@[m [mexport function GroupMarker({[m
+   opacity,[m
+   bearing = 0,[m
+   moving = false,[m
+[32m+[m[32m  title,[m
+ }: GroupMarkerProps) {[m
+[32m+[m[32m  const tooltip = title ?? markerTitle(unitIds, status);[m
+   const count = unitIds.length;[m
+   const suffix = count === 1 ? padded(unitIds[0]) : `×${count}`;[m
+   const position = {[m
+[36m@@ -177,7 +190,12 @@[m [mexport function GroupMarker({[m
+ [m
+   if (!onExpand) {[m
+     return ([m
+[31m-      <div className="absolute" style={position} aria-hidden={!label || undefined}>[m
+[32m+[m[32m      <div[m
+[32m+[m[32m        className="absolute"[m
+[32m+[m[32m        style={position}[m
+[32m+[m[32m        title={tooltip}[m
+[32m+[m[32m        aria-hidden={!label || undefined}[m
+[32m+[m[32m      >[m
+         {label && <span className="sr-only">{label}</span>}[m
+         {face}[m
+       </div>[m
+[36m@@ -189,6 +207,7 @@[m [mexport function GroupMarker({[m
+       type="button"[m
+       className="absolute cursor-pointer rounded-[6px]"[m
+       style={position}[m
+[32m+[m[32m      title={tooltip}[m
+       aria-expanded={expanded}[m
+       aria-label={[m
+         label ??[m
+[1mdiff --git a/src/components/LaunchSiteMarker.tsx b/src/components/LaunchSiteMarker.tsx[m
+[1mindex ec8f8ad..c6d4eff 100644[m
+[1m--- a/src/components/LaunchSiteMarker.tsx[m
+[1m+++ b/src/components/LaunchSiteMarker.tsx[m
+[36m@@ -1,5 +1,5 @@[m
+ import { MARKER } from '../data/mapGeometry';[m
+[31m-import { MarkerFace } from './GroupMarker';[m
+[32m+[m[32mimport { MarkerFace, markerTitle } from './GroupMarker';[m
+ import type { SiteGroup } from '../data/launchSites';[m
+ import type { Unit } from '../data/types';[m
+ [m
+[36m@@ -11,7 +11,8 @@[m [mimport type { Unit } from '../data/types';[m
+  * looks like itself from the moment the operator first sees it to the moment[m
+  * it is flying a sector.[m
+  *[m
+[31m- * The maintenance pair carry a tooltip; the rest are just there.[m
+[32m+[m[32m * The maintenance pair open the unavailable tooltip; the rest name their[m
+[32m+[m[32m * state in a plain hover tooltip.[m
+  */[m
+ export function LaunchSiteMarker({[m
+   group,[m
+[36m@@ -37,7 +38,14 @@[m [mexport function LaunchSiteMarker({[m
+ [m
+   if (!onHover) {[m
+     return ([m
+[31m-      <div className="absolute" style={position}>[m
+[32m+[m[32m      <div[m
+[32m+[m[32m        className="absolute"[m
+[32m+[m[32m        style={position}[m
+[32m+[m[32m        title={markerTitle([m
+[32m+[m[32m          units.map((unit) => unit.id),[m
+[32m+[m[32m          units[0].status,[m
+[32m+[m[32m        )}[m
+[32m+[m[32m      >[m
+         {face}[m
+       </div>[m
+     );[m
+[36m@@ -45,7 +53,7 @@[m [mexport function LaunchSiteMarker({[m
+ [m
+   /*[m
+    * Dimmed while it sits there, full strength while the operator is on it:[m
+[31m-   * the legend already reads "Dimmed = position not current", and these two[m
+[32m+[m[32m   * the state key already reads "Dimmed = position not current", and these two[m
+    * are not going anywhere.[m
+    */[m
+   return ([m
+[1mdiff --git a/src/components/Legend.tsx b/src/components/Legend.tsx[m
+[1mdeleted file mode 100644[m
+[1mindex 281eb57..0000000[m
+[1m--- a/src/components/Legend.tsx[m
+[1m+++ /dev/null[m
+[36m@@ -1,39 +0,0 @@[m
+[31m-import type { CSSProperties } from 'react';[m
+[31m-import { LEGEND } from '../data/mapGeometry';[m
+[31m-import { StateBadge } from './StateBadge';[m
+[31m-import type { UnitStatus } from '../data/types';[m
+[31m-[m
+[31m-const ITEMS: { status: UnitStatus; label: string; size: number }[] = [[m
+[31m-  { status: 'ready', label: 'Ready', size: 10 },[m
+[31m-  { status: 'autonomous', label: 'Autonomous', size: 8 },[m
+[31m-  { status: 'needs-operator', label: 'Needs operator', size: 10 },[m
+[31m-  { status: 'degraded', label: 'Degraded', size: 10 },[m
+[31m-  { status: 'out-of-contact', label: 'Out of contact', size: 10 },[m
+[31m-  { status: 'unavailable', label: 'Unavailable', size: 10 },[m
+[31m-];[m
+[31m-[m
+[31m-const LEGEND_BOX: CSSProperties = {[m
+[31m-  left: LEGEND.x,[m
+[31m-  top: LEGEND.y,[m
+[31m-  width: LEGEND.width,[m
+[31m-  height: LEGEND.height,[m
+[31m-};[m
+[31m-[m
+[31m-export function Legend({ box = LEGEND_BOX }: { box?: CSSProperties }) {[m
+[31m-  return ([m
+[31m-    <div[m
+[31m-      className="absolute flex items-center gap-[18px] overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel px-[12px] shadow-legend"[m
+[31m-      style={box}[m
+[31m-    >[m
+[31m-      {ITEMS.map((item) => ([m
+[31m-        <div key={item.status} className="flex shrink-0 items-center gap-[6px]">[m
+[31m-          <StateBadge status={item.status} size={item.size} />[m
+[31m-          <p className="whitespace-nowrap text-[12px] text-text-secondary">{item.label}</p>[m
+[31m-        </div>[m
+[31m-      ))}[m
+[31m-      <p className="min-w-[291px] flex-1 text-[12px] text-text-secondary">[m
+[31m-        Ring = needs attention · Dimmed = position not current[m
+[31m-      </p>[m
+[31m-    </div>[m
+[31m-  );[m
+[31m-}[m
+[1mdiff --git a/src/components/LiveMapLayer.tsx b/src/components/LiveMapLayer.tsx[m
+[1mindex 4e972f6..9bed3fa 100644[m
+[1m--- a/src/components/LiveMapLayer.tsx[m
+[1m+++ b/src/components/LiveMapLayer.tsx[m
+[36m@@ -1,4 +1,11 @@[m
+[31m-import { MARKER, MARKER_ANCHOR, SEARCHED_FILL_OPACITY, SECTOR_LABEL_POS, STAGE } from '../data/mapGeometry';[m
+[32m+[m[32mimport {[m
+[32m+[m[32m  HIGHLIGHT_DIM,[m
+[32m+[m[32m  MARKER,[m
+[32m+[m[32m  MARKER_ANCHOR,[m
+[32m+[m[32m  SEARCHED_FILL_OPACITY,[m
+[32m+[m[32m  SECTOR_LABEL_POS,[m
+[32m+[m[32m  STAGE,[m
+[32m+[m[32m} from '../data/mapGeometry';[m
+ import {[m
+   INCIDENT_AFFECTED_LABEL,[m
+   INCIDENT_RELAY_LABEL,[m
+[36m@@ -17,18 +24,15 @@[m [mimport { SECTORS } from '../data/sectors';[m
+ import { INCIDENT } from '../data/live';[m
+ import { SITE_GROUPS } from '../data/launchSites';[m
+ import { UNITS_BY_ID } from '../data/assets';[m
+[31m-import { unitType } from '../lib/units';[m
+[32m+[m[32mimport { formatUnitRange, unitType } from '../lib/units';[m
+ import { bandsFor, bearingOf, cellsPath, clearedCells, unitTrack, type Band } from '../lib/sweep';[m
+ import { useReducedMotion } from '../lib/useReducedMotion';[m
+ import type { Outage } from '../lib/live';[m
+[31m-import { GroupMarker } from './GroupMarker';[m
+[32m+[m[32mimport { GroupMarker, markerTitle } from './GroupMarker';[m
+ import { MapBackdrop } from './MapBackdrop';[m
+ import type { SectorLive } from '../store/useLiveStore';[m
+ import type { AssetType, SectorId, UnitStatus } from '../data/types';[m
+ [m
+[31m-/** How far a marker steps back while a feed line picks out other units. */[m
+[31m-const HIGHLIGHT_DIM = 0.3;[m
+[31m-[m
+ export interface LiveMapLayerProps {[m
+   unitsBySector: Record<SectorId, string[]>;[m
+   relayUnits: string[];[m
+[36m@@ -108,7 +112,7 @@[m [mexport function LiveMapLayer({[m
+     <div[m
+       role="region"[m
+       aria-label="Mission map: sectors, searched ground and live unit positions"[m
+[31m-      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"[m
+[32m+[m[32m      className="absolute inset-0 overflow-hidden bg-map-backdrop"[m
+       style={{ width: STAGE.width, height: STAGE.height }}[m
+     >[m
+       <MapBackdrop />[m
+[36m@@ -203,6 +207,7 @@[m [mexport function LiveMapLayer({[m
+              */[m
+             bearing={marker.bearing}[m
+             label={labelFor(marker.unitIds, marker.type, lost, isRelayDown, since)}[m
+[32m+[m[32m            title={titleFor(marker.unitIds, lost, isRelayDown, since)}[m
+             /*[m
+              * A unit that is flying glides between one minute's position and[m
+              * the next, so the pattern reads as a pattern rather than a[m
+[36m@@ -601,6 +606,17 @@[m [mfunction statusOf(unitIds: string[], lost: boolean, relayDown: boolean): UnitSta[m
+   return UNITS_BY_ID[unitIds[0]]?.status ?? 'ready';[m
+ }[m
+ [m
+[32m+[m[32m/**[m
+[32m+[m[32m * The hover tooltip: the state in words, and for a unit out of contact the[m
+[32m+[m[32m * reason it is dimmed, so the operator never needs the key to read a marker.[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction titleFor(unitIds: string[], lost: boolean, relayDown: boolean, since: number): string {[m
+[32m+[m[32m  const units = formatUnitRange(unitIds);[m
+[32m+[m[32m  if (lost) return `${units} · Out of contact ${since} min · position not current`;[m
+[32m+[m[32m  if (relayDown) return `${units} · Degraded · relay link lost`;[m
+[32m+[m[32m  return markerTitle(unitIds, statusOf(unitIds, lost, relayDown));[m
+[32m+[m[32m}[m
+[32m+[m
+ /** What a screen reader hears, since the map's own labels stay off. */[m
+ function labelFor([m
+   unitIds: string[],[m
+[1mdiff --git a/src/components/LiveSectorSection.tsx b/src/components/LiveSectorSection.tsx[m
+[1mindex 48b3267..c26dc42 100644[m
+[1m--- a/src/components/LiveSectorSection.tsx[m
+[1m+++ b/src/components/LiveSectorSection.tsx[m
+[36m@@ -3,11 +3,12 @@[m [mimport { SECTORS_BY_ID } from '../data/sectors';[m
+ import { formatUnitRange, groupByType } from '../lib/units';[m
+ import { LiveCoverageBar } from './LiveCoverageBar';[m
+ import { PriorityBadge } from './PriorityBadge';[m
+[31m-import { SectorLockButton } from './SectorLockButton';[m
+[32m+[m[32mimport { RailPanel, RailRow } from './RailRow';[m
+[32m+[m[32mimport { LockIndicator, LockToggle } from './SectorLock';[m
+ import { UnitRow } from './UnitRow';[m
+[31m-import { OperatorSetGroup, operatorNote } from './SectorSection';[m
+[32m+[m[32mimport { OperatorSetGroup, operatorNote, rowDomId } from './SectorSection';[m
+ import type { SectorLive } from '../store/useLiveStore';[m
+[31m-import type { Assignments } from '../store/usePlanStore';[m
+[32m+[m[32mimport { sectorSelection, type Assignments, type RailSelection } from '../store/usePlanStore';[m
+ import type { SectorId } from '../data/types';[m
+ [m
+ export interface LiveSectorSectionProps {[m
+[36m@@ -19,9 +20,13 @@[m [mexport interface LiveSectorSectionProps {[m
+   outOfContact: string[];[m
+   /** The amber card, when this sector has something the operator must decide. */[m
+   flag?: ReactNode;[m
+[31m-  /** Units the autonomy may not re-task. */[m
+[31m-  lockedUnits: string[];[m
+[32m+[m[32m  /** The autonomy may not re-task this sector. */[m
+[32m+[m[32m  locked: boolean;[m
+   onToggleLock: (sectorId: SectorId) => void;[m
+[32m+[m[32m  onPause: (sectorId: SectorId) => void;[m
+[32m+[m[32m  /** The one selected row in the rail, which may or may not be in this sector. */[m
+[32m+[m[32m  selection: RailSelection | null;[m
+[32m+[m[32m  onSelect: (next: RailSelection, rowElementId: string) => void;[m
+ }[m
+ [m
+ /**[m
+[36m@@ -40,9 +45,15 @@[m [mexport function LiveSectorSection({[m
+   live,[m
+   outOfContact,[m
+   flag,[m
+[31m-  lockedUnits,[m
+[32m+[m[32m  locked,[m
+   onToggleLock,[m
+[32m+[m[32m  onPause,[m
+[32m+[m[32m  selection,[m
+[32m+[m[32m  onSelect,[m
+ }: LiveSectorSectionProps) {[m
+[32m+[m[32m  const header = sectorSelection(sectorId);[m
+[32m+[m[32m  const headerSelected = selection?.key === header.key;[m
+[32m+[m[32m  const headerRowId = rowDomId(header.key);[m
+   const sector = SECTORS_BY_ID[sectorId];[m
+   const groups = groupByType(unitIds);[m
+ [m
+[36m@@ -53,23 +64,46 @@[m [mexport function LiveSectorSection({[m
+ [m
+   const status = statusOf(live, outOfContact, unitIds.length);[m
+ [m
+[31m-  const rowsFor = (ids: string[], type: (typeof groups)[number]['type']) => {[m
+[32m+[m[32m  /*[m
+[32m+[m[32m   * A live row selects (and lights its units on the map) but does not expand:[m
+[32m+[m[32m   * nothing can be re-tasked mid-flight in this demo, so there are no options[m
+[32m+[m[32m   * to show beneath it.[m
+[32m+[m[32m   */[m
+[32m+[m[32m  const rowsFor = (ids: string[], type: (typeof groups)[number]['type'], source: string) => {[m
+     const detail = detailFor(ids, live.stopped, outOfContact);[m
+[32m+[m[32m    const key = `units:${sectorId}:${type}:${source}`;[m
+     return ([m
+       <UnitRow[m
+         label={formatUnitRange(ids)}[m
+         type={type}[m
+         detailOverride={detail}[m
+         detailFlagged={detail !== undefined}[m
+[32m+[m[32m        rowId={rowDomId(key)}[m
+[32m+[m[32m        selected={selection?.key === key}[m
+[32m+[m[32m        expandable={false}[m
+[32m+[m[32m        onToggle={(id) => onSelect({ key, sector: sectorId, unitIds: ids }, id)}[m
+       />[m
+     );[m
+   };[m
+ [m
+   return ([m
+[31m-    <div className="flex w-full shrink-0 flex-col items-start gap-[2px] rounded-[6px] border border-surface-card bg-surface-card px-[6px] pt-[5px] pb-[6px]">[m
+[31m-      <div className="flex h-[30px] w-full items-center gap-[4px] pl-[9px]">[m
+[32m+[m[32m    <div[m
+[32m+[m[32m      className={`flex w-full shrink-0 flex-col items-start gap-[2px] rounded-[6px] border bg-surface-card px-[6px] pt-[5px] pb-[6px] ${[m
+[32m+[m[32m        selection?.sector === sectorId ? 'border-text-primary' : 'border-surface-card'[m
+[32m+[m[32m      }`}[m
+[32m+[m[32m    >[m
+[32m+[m[32m      <RailRow[m
+[32m+[m[32m        rowId={headerRowId}[m
+[32m+[m[32m        labelledBy={`${headerRowId}-title`}[m
+[32m+[m[32m        selected={headerSelected}[m
+[32m+[m[32m        onToggle={(id) => onSelect(header, id)}[m
+[32m+[m[32m        contentClassName="h-[30px] gap-[4px] pr-[5px] pl-[9px]"[m
+[32m+[m[32m      >[m
+         {/* A heading, so the rail can be navigated sector by sector. */}[m
+[31m-        <h3 className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary">[m
+[32m+[m[32m        <h3[m
+[32m+[m[32m          id={`${headerRowId}-title`}[m
+[32m+[m[32m          className="h-[17px] w-[139px] shrink-0 text-[14px] font-semibold text-text-primary"[m
+[32m+[m[32m        >[m
+           {sector.label}[m
+         </h3>[m
+         <PriorityBadge priority={sector.priority} />[m
+[36m@@ -85,12 +119,29 @@[m [mexport function LiveSectorSection({[m
+             {status.label}[m
+           </p>[m
+         </div>[m
+[31m-        <SectorLockButton[m
+[31m-          sectorLabel={sector.label}[m
+[31m-          locked={unitIds.length > 0 && unitIds.every((id) => lockedUnits.includes(id))}[m
+[31m-          onToggle={() => onToggleLock(sectorId)}[m
+[31m-        />[m
+[31m-      </div>[m
+[32m+[m[32m        {locked && <LockIndicator />}[m
+[32m+[m[32m      </RailRow>[m
+[32m+[m
+[32m+[m[32m      {headerSelected && ([m
+[32m+[m[32m        <RailPanel rowId={headerRowId} label={`${sector.label} controls`}>[m
+[32m+[m[32m          <div className="flex w-full flex-col items-start gap-[6px]">[m
+[32m+[m[32m            <LockToggle[m
+[32m+[m[32m              sectorId={sectorId}[m
+[32m+[m[32m              locked={locked}[m
+[32m+[m[32m              onToggle={() => onToggleLock(sectorId)}[m
+[32m+[m[32m            />[m
+[32m+[m[32m            {/* Frame copy, from the incident card's "always available" row. */}[m
+[32m+[m[32m            <button[m
+[32m+[m[32m              type="button"[m
+[32m+[m[32m              onClick={() => onPause(sectorId)}[m
+[32m+[m[32m              disabled={live.paused || unitIds.length === 0}[m
+[32m+[m[32m              className="flex shrink-0 cursor-pointer items-center rounded-[3px] border border-interaction-primary px-[8px] py-[3px] text-[12px] font-semibold whitespace-nowrap text-interaction-primary disabled:cursor-default disabled:border-border-subtle disabled:text-text-secondary"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              {live.paused ? `Sector ${sectorId} paused` : `Pause Sector ${sectorId}`}[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </RailPanel>[m
+[32m+[m[32m      )}[m
+ [m
+       <LiveCoverageBar[m
+         searched={live.searched}[m
+[36m@@ -118,11 +169,11 @@[m [mexport function LiveSectorSection({[m
+ [m
+         return ([m
+           <div key={group.type} className="contents">[m
+[31m-            {autonomySet.length > 0 && rowsFor(autonomySet, group.type)}[m
+[32m+[m[32m            {autonomySet.length > 0 && rowsFor(autonomySet, group.type, 'autonomy')}[m
+             {operatorSet.length > 0 && ([m
+               <OperatorSetGroup[m
+                 note={operatorNote(assignments, operatorSet)}[m
+[31m-                rows={rowsFor(operatorSet, group.type)}[m
+[32m+[m[32m                rows={rowsFor(operatorSet, group.type, 'operator')}[m
+               />[m
+             )}[m
+           </div>[m
+[1mdiff --git a/src/components/LiveShell.tsx b/src/components/LiveShell.tsx[m
+[1mdeleted file mode 100644[m
+[1mindex 1e039e8..0000000[m
+[1m--- a/src/components/LiveShell.tsx[m
+[1m+++ /dev/null[m
+[36m@@ -1,122 +0,0 @@[m
+[31m-import { useEffect, useState, type ReactNode } from 'react';[m
+[31m-import { LIVE_SHELL, STAGE } from '../data/mapGeometry';[m
+[31m-[m
+[31m-/**[m
+[31m- * The live screen's frame: a map that fills the window, and a rail beside it.[m
+[31m- *[m
+[31m- * Screens 1 and 2 sit on `Stage`, which scales the whole console as one[m
+[31m- * picture — right for a plan being reviewed, where the frame is the artefact.[m
+[31m- * A mission being watched wants the opposite. The rail has to be reachable and[m
+[31m- * the header has to be where the operator's eye already is, at whatever size[m
+[31m- * the console is open. So here the chrome is laid out in real pixels against[m
+[31m- * the window, and only the map plane scales.[m
+[31m- *[m
+[31m- * The plane is scaled to *cover* the map area rather than fit inside it, so[m
+[31m- * there is never a letterbox beside the mission; what falls outside is clipped[m
+[31m- * the way any map is clipped by its window.[m
+[31m- *[m
+[31m- * **Flagged for design review:** the frames are drawn at 1440 x 1035 and say[m
+[31m- * nothing about other window sizes. The rail's width, the header's offset and[m
+[31m- * the gutters are the frame's own; everything else is the map.[m
+[31m- */[m
+[31m-export function LiveShell({[m
+[31m-  map,[m
+[31m-  chrome,[m
+[31m-  rail,[m
+[31m-}: {[m
+[31m-  /** Drawn in the scaled 1440 x 1035 map plane. */[m
+[31m-  map: ReactNode;[m
+[31m-  /** Drawn over the map area in real pixels: header, feed, legend. */[m
+[31m-  chrome: ReactNode;[m
+[31m-  rail: ReactNode;[m
+[31m-}) {[m
+[31m-  return ([m
+[31m-    <div className="flex h-screen w-screen overflow-hidden bg-surface-void">[m
+[31m-      <main className="relative min-w-0 flex-1 overflow-hidden bg-map-backdrop">[m
+[31m-        <MapPlane>{map}</MapPlane>[m
+[31m-        {chrome}[m
+[31m-      </main>[m
+[31m-[m
+[31m-      <aside[m
+[31m-        className="relative h-screen shrink-0"[m
+[31m-        style={{ width: LIVE_SHELL.railWidth }}[m
+[31m-      >[m
+[31m-        {rail}[m
+[31m-      </aside>[m
+[31m-    </div>[m
+[31m-  );[m
+[31m-}[m
+[31m-[m
+[31m-/**[m
+[31m- * The 1440 x 1035 map plane, scaled to cover its parent and centred.[m
+[31m- *[m
+[31m- * Everything inside keeps its stage coordinates, which is what lets the sector[m
+[31m- * outlines, the coverage grid and the unit positions go on being computed in[m
+[31m- * one fixed space while the window is any shape at all.[m
+[31m- */[m
+[31m-function MapPlane({ children }: { children: ReactNode }) {[m
+[31m-  const [area, setArea] = useState<{ width: number; height: number } | null>(null);[m
+[31m-  const [node, setNode] = useState<HTMLDivElement | null>(null);[m
+[31m-[m
+[31m-  useEffect(() => {[m
+[31m-    if (!node) return;[m
+[31m-    const measure = () =>[m
+[31m-      setArea({ width: node.clientWidth, height: node.clientHeight });[m
+[31m-    measure();[m
+[31m-[m
+[31m-    const observer = new ResizeObserver(measure);[m
+[31m-    observer.observe(node);[m
+[31m-    return () => observer.disconnect();[m
+[31m-  }, [node]);[m
+[31m-[m
+[31m-  const scale = area[m
+[31m-    ? Math.max(area.width / STAGE.width, area.height / STAGE.height)[m
+[31m-    : 1;[m
+[31m-[m
+[31m-  return ([m
+[31m-    <div ref={setNode} className="absolute inset-0 overflow-hidden">[m
+[31m-      <div[m
+[31m-        className="absolute top-1/2 left-1/2 origin-center"[m
+[31m-        style={{[m
+[31m-          width: STAGE.width,[m
+[31m-          height: STAGE.height,[m
+[31m-          transform: `translate(-50%, -50%) scale(${scale})`,[m
+[31m-        }}[m
+[31m-      >[m
+[31m-        {/* Until the first measurement the plane is hidden rather than wrong. */}[m
+[31m-        <div style={{ visibility: area ? 'visible' : 'hidden' }}>{children}</div>[m
+[31m-      </div>[m
+[31m-    </div>[m
+[31m-  );[m
+[31m-}[m
+[31m-[m
+[31m-/**[m
+[31m- * Where a piece of chrome sits over the map area.[m
+[31m- *[m
+[31m- * The header's offset is fixed at every window size, which is the point of[m
+[31m- * laying this out in pixels rather than on the stage: the operator's eye[m
+[31m- * learns one place for the mission clock and keeps it.[m
+[31m- */[m
+[31m-export const CHROME = {[m
+[31m-  header: {[m
+[31m-    left: LIVE_SHELL.gutter,[m
+[31m-    right: LIVE_SHELL.gutter,[m
+[31m-    top: LIVE_SHELL.headerTop,[m
+[31m-    height: LIVE_SHELL.headerHeight,[m
+[31m-  },[m
+[31m-  legend: {[m
+[31m-    left: LIVE_SHELL.gutter,[m
+[31m-    right: LIVE_SHELL.gutter,[m
+[31m-    bottom: LIVE_SHELL.headerTop,[m
+[31m-    height: LIVE_SHELL.legendHeight,[m
+[31m-  },[m
+[31m-  feed: {[m
+[31m-    right: LIVE_SHELL.gutter,[m
+[31m-    bottom: LIVE_SHELL.headerTop + LIVE_SHELL.legendHeight + 15,[m
+[31m-    width: 459,[m
+[31m-  },[m
+[31m-  restart: {[m
+[31m-    left: LIVE_SHELL.gutter + 12,[m
+[31m-    bottom: LIVE_SHELL.headerTop + LIVE_SHELL.legendHeight + 15,[m
+[31m-  },[m
+[31m-} as const;[m
+[1mdiff --git a/src/components/LiveTopBar.tsx b/src/components/LiveTopBar.tsx[m
+[1mindex 1a101f7..767ba51 100644[m
+[1m--- a/src/components/LiveTopBar.tsx[m
+[1m+++ b/src/components/LiveTopBar.tsx[m
+[36m@@ -4,6 +4,7 @@[m [mimport { INCIDENT } from '../data/live';[m
+ import { elapsedLabel } from '../lib/live';[m
+ import { StatDivider, TopBarChrome } from './TopBar';[m
+ import type { SectorLive } from '../store/useLiveStore';[m
+[32m+[m[32mimport type { Attention } from '../lib/attention';[m
+ [m
+ export interface LiveTopBarProps {[m
+   minute: number;[m
+[36m@@ -13,7 +14,9 @@[m [mexport interface LiveTopBarProps {[m
+   inContact: number;[m
+   available: number;[m
+   /** Where the bar sits; the live shell stretches it across the map area. */[m
+[31m-  box?: CSSProperties;[m
+[32m+[m[32m  box: CSSProperties;[m
+[32m+[m[32m  attention: Attention;[m
+[32m+[m[32m  onRestart: () => void;[m
+ }[m
+ [m
+ /**[m
+[36m@@ -36,11 +39,13 @@[m [mexport function LiveTopBar({[m
+   inContact,[m
+   available,[m
+   box,[m
+[32m+[m[32m  attention,[m
+[32m+[m[32m  onRestart,[m
+ }: LiveTopBarProps) {[m
+   const behind = worst !== null && worst.behind > 0;[m
+ [m
+   return ([m
+[31m-    <TopBarChrome statRight={0} box={box}>[m
+[32m+[m[32m    <TopBarChrome box={box} attention={attention} onRestart={onRestart}>[m
+       <div className="flex shrink-0 items-center gap-[5px] overflow-hidden whitespace-nowrap">[m
+         <p className="text-[12px] text-text-secondary">Live:</p>[m
+         <p className="text-[15px] font-semibold text-text-primary">{elapsedLabel(minute)}</p>[m
+[1mdiff --git a/src/components/MapLayer.tsx b/src/components/MapLayer.tsx[m
+[1mindex eaec420..8f43e68 100644[m
+[1m--- a/src/components/MapLayer.tsx[m
+[1m+++ b/src/components/MapLayer.tsx[m
+[36m@@ -18,6 +18,7 @@[m [mimport {[m
+   RELAY_MARKER,[m
+   SECTOR_LABEL_POS,[m
+   STAGE,[m
+[32m+[m[32m  HIGHLIGHT_DIM,[m
+ } from '../data/mapGeometry';[m
+ import {[m
+   SECTOR_FILL_OPACITY,[m
+[36m@@ -47,6 +48,8 @@[m [mexport interface MapLayerProps {[m
+   relayUnits: string[];[m
+   coverage: Record<SectorId, number>;[m
+   selectedSector: SectorId | null;[m
+[32m+[m[32m  /** The units selected in the rail; everything else fades. */[m
+[32m+[m[32m  highlight: string[] | null;[m
+   fanned: FannedGroupId | null;[m
+   onFan: (group: FannedGroupId | null) => void;[m
+   onMove: (unitId: string, toSector: SectorId) => void;[m
+[36m@@ -59,11 +62,17 @@[m [mexport function MapLayer({[m
+   relayUnits,[m
+   coverage,[m
+   selectedSector,[m
+[32m+[m[32m  highlight,[m
+   fanned,[m
+   onFan,[m
+   onMove,[m
+   onRefuse,[m
+ }: MapLayerProps) {[m
+[32m+[m[32m  const lit = highlight ? new Set(highlight) : null;[m
+[32m+[m[32m  /** A marker that stands for none of the selected units fades back. */[m
+[32m+[m[32m  const fadeFor = (unitIds: string[]) =>[m
+[32m+[m[32m    lit !== null && !unitIds.some((id) => lit.has(id)) ? HIGHLIGHT_DIM : undefined;[m
+[32m+[m
+   const paths = useRef<Record<string, SVGPathElement | null>>({});[m
+   const [dragging, setDragging] = useState<string | null>(null);[m
+   const [over, setOver] = useState<SectorId | null>(null);[m
+[36m@@ -185,7 +194,7 @@[m [mexport function MapLayer({[m
+       <div[m
+         role="region"[m
+       aria-label="Mission map: sectors and the units proposed for each"[m
+[31m-      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"[m
+[32m+[m[32m      className="absolute inset-0 overflow-hidden bg-map-backdrop"[m
+         style={{ width: STAGE.width, height: STAGE.height }}[m
+         onClick={() => onFan(null)}[m
+       >[m
+[36m@@ -251,7 +260,7 @@[m [mexport function MapLayer({[m
+ [m
+         {relayUnits.length > 0 &&[m
+           (isFanned(fanned, 'ALL', 'GRF') ? ([m
+[31m-            <FannedGroup unitIds={relayUnits} anchor={RELAY_MARKER} />[m
+[32m+[m[32m            <FannedGroup unitIds={relayUnits} anchor={RELAY_MARKER} highlight={lit} />[m
+           ) : ([m
+             <GroupMarker[m
+               type="GRF"[m
+[36m@@ -259,6 +268,7 @@[m [mexport function MapLayer({[m
+               status={UNITS_BY_ID[relayUnits[0]].status}[m
+               x={RELAY_MARKER.x}[m
+               y={RELAY_MARKER.y}[m
+[32m+[m[32m              opacity={fadeFor(relayUnits)}[m
+               expanded={false}[m
+               onExpand={() => onFan({ target: 'ALL', type: 'GRF' })}[m
+             />[m
+[36m@@ -277,6 +287,7 @@[m [mexport function MapLayer({[m
+                   key={`${sector.id}-${group.type}`}[m
+                   unitIds={group.unitIds}[m
+                   anchor={anchor}[m
+[32m+[m[32m                  highlight={lit}[m
+                 />[m
+               );[m
+             }[m
+[36m@@ -289,6 +300,7 @@[m [mexport function MapLayer({[m
+                 status={UNITS_BY_ID[group.unitIds[0]].status}[m
+                 x={anchor.x}[m
+                 y={anchor.y}[m
+[32m+[m[32m                opacity={fadeFor(group.unitIds)}[m
+                 expanded={false}[m
+                 onExpand={() => onFan({ target: sector.id, type: group.type })}[m
+               />[m
+[1mdiff --git a/src/components/MoveToSectorMenu.tsx b/src/components/MoveToSectorMenu.tsx[m
+[1mdeleted file mode 100644[m
+[1mindex e680c29..0000000[m
+[1m--- a/src/components/MoveToSectorMenu.tsx[m
+[1m+++ /dev/null[m
+[36m@@ -1,198 +0,0 @@[m
+[31m-import { useEffect, useLayoutEffect, useRef, useState } from 'react';[m
+[31m-import { SECTORS, SECTOR_IDS } from '../data/sectors';[m
+[31m-import { REACH_WARNING_GLYPH, canOperatorMove } from '../data/reach';[m
+[31m-import { coverageAfterMove, type Assignments } from '../store/usePlanStore';[m
+[31m-import type { SectorId } from '../data/types';[m
+[31m-[m
+[31m-/**[m
+[31m- * The keyboard path to the same move the map does by drag.[m
+[31m- *[m
+[31m- * No Figma frame covers this, so it is built from the rail's own parts: a[m
+[31m- * `surface/card` popover on `border/subtle`, one item per sector, each showing[m
+[31m- * the coverage that sector would have **after** the move. The number comes[m
+[31m- * from `coverageAfterMove`, which is also what the drag preview reads, so the[m
+[31m- * menu can never promise something the drop does not deliver.[m
+[31m- *[m
+[31m- * A sector the unit may not be sent to stays in the list and says why, rather[m
+[31m- * than disappearing: the operator should be able to see that they considered[m
+[31m- * it and why it is out.[m
+[31m- */[m
+[31m-export function MoveToSectorMenu({[m
+[31m-  unitId,[m
+[31m-  current,[m
+[31m-  assignments,[m
+[31m-  onMove,[m
+[31m-}: {[m
+[31m-  unitId: string;[m
+[31m-  current: SectorId | null;[m
+[31m-  assignments: Assignments;[m
+[31m-  onMove: (unitId: string, toSector: SectorId) => void;[m
+[31m-}) {[m
+[31m-  const [open, setOpen] = useState(false);[m
+[31m-  const [dropUp, setDropUp] = useState(false);[m
+[31m-  const trigger = useRef<HTMLButtonElement>(null);[m
+[31m-  const menu = useRef<HTMLDivElement>(null);[m
+[31m-[m
+[31m-  const close = (refocus = true) => {[m
+[31m-    setOpen(false);[m
+[31m-    if (refocus) trigger.current?.focus();[m
+[31m-  };[m
+[31m-[m
+[31m-  /*[m
+[31m-   * The rail clips its content, so a menu opened on one of the last rows[m
+[31m-   * would have its lowest sectors cut off — exactly the rows the operator is[m
+[31m-   * most likely to be moving, since Sector D is the one that needs help. Open[m
+[31m-   * upward instead whenever there is not room below.[m
+[31m-   */[m
+[31m-  useLayoutEffect(() => {[m
+[31m-    if (!open || !menu.current) return;[m
+[31m-[m
+[31m-    setDropUp(false);[m
+[31m-    const rect = menu.current.getBoundingClientRect();[m
+[31m-    const clip = clippingAncestor(menu.current);[m
+[31m-    const limit = clip ? clip.getBoundingClientRect().bottom : window.innerHeight;[m
+[31m-    if (rect.bottom > limit) setDropUp(true);[m
+[31m-  }, [open]);[m
+[31m-[m
+[31m-  // First item takes focus when the menu opens, so the keyboard path never[m
+[31m-  // needs the pointer.[m
+[31m-  useEffect(() => {[m
+[31m-    if (!open) return;[m
+[31m-    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();[m
+[31m-  }, [open]);[m
+[31m-[m
+[31m-  useEffect(() => {[m
+[31m-    if (!open) return;[m
+[31m-    const onPointerDown = (event: MouseEvent) => {[m
+[31m-      if (!menu.current?.contains(event.target as Node)) close(false);[m
+[31m-    };[m
+[31m-    document.addEventListener('mousedown', onPointerDown);[m
+[31m-    return () => document.removeEventListener('mousedown', onPointerDown);[m
+[31m-  }, [open]);[m
+[31m-[m
+[31m-  const onKeyDown = (event: React.KeyboardEvent) => {[m
+[31m-    if (event.key === 'Escape') {[m
+[31m-      event.stopPropagation();[m
+[31m-      close();[m
+[31m-      return;[m
+[31m-    }[m
+[31m-[m
+[31m-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;[m
+[31m-    event.preventDefault();[m
+[31m-[m
+[31m-    const items = Array.from([m
+[31m-      menu.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [],[m
+[31m-    );[m
+[31m-    const index = items.indexOf(document.activeElement as HTMLButtonElement);[m
+[31m-    const next =[m
+[31m-      event.key === 'ArrowDown'[m
+[31m-        ? items[(index + 1) % items.length][m
+[31m-        : items[(index - 1 + items.length) % items.length];[m
+[31m-    next?.focus();[m
+[31m-  };[m
+[31m-[m
+[31m-  return ([m
+[31m-    <div className="relative shrink-0">[m
+[31m-      <button[m
+[31m-        ref={trigger}[m
+[31m-        type="button"[m
+[31m-        aria-haspopup="menu"[m
+[31m-        aria-expanded={open}[m
+[31m-        aria-label={`Move ${unitId} to another sector`}[m
+[31m-        onClick={() => setOpen((was) => !was)}[m
+[31m-        className="flex h-[16px] w-[18px] cursor-pointer items-center justify-center rounded-[3px] text-[12px] leading-none text-text-secondary hover:bg-surface-app hover:text-text-primary"
