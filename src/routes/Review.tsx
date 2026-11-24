@@ -1,10 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Legend } from '../components/Legend';
-import { RestartDemo } from '../components/RestartDemo';
+import { CHROME, ConsoleShell } from '../components/ConsoleShell';
 import { LiveRegion } from '../components/LiveRegion';
 import { MapLayer, type FannedGroupId } from '../components/MapLayer';
-import { Stage } from '../components/Stage';
 import { TaskingPanel } from '../components/TaskingPanel';
 import { scopeLabel } from '../components/RePropoPopover';
 import { TopBar } from '../components/TopBar';
@@ -20,6 +18,9 @@ import {
   usePlanStore,
   weakest,
 } from '../store/usePlanStore';
+import { unitType } from '../lib/units';
+import { planAttention } from '../lib/attention';
+import { AVAILABLE_UNITS } from '../data/assets';
 import type { SectorId } from '../data/types';
 
 /**
@@ -34,8 +35,10 @@ export function Review() {
   const navigate = useNavigate();
   const assignments = usePlanStore((state) => state.assignments);
   const staged = usePlanStore((state) => state.staged);
-  const lockedUnits = usePlanStore((state) => state.lockedUnits);
+  const lockedSectors = usePlanStore((state) => state.lockedSectors);
   const selectedSector = usePlanStore((state) => state.selectedSector);
+  const selection = usePlanStore((state) => state.selection);
+  const select = usePlanStore((state) => state.select);
   const moveUnit = usePlanStore((state) => state.moveUnit);
   const setStaged = usePlanStore((state) => state.setStaged);
   const toggleSectorLock = usePlanStore((state) => state.toggleSectorLock);
@@ -59,7 +62,13 @@ export function Review() {
       // The store refuses a move the reach rule disallows, so say nothing
       // rather than announce one that did not happen.
       const next = usePlanStore.getState().assignments;
-      if (!speak || next[unitId]?.target !== toSector) return;
+      if (next[unitId]?.target !== toSector) return;
+
+      // A row that stood for the unit no longer describes where it is, so it
+      // collapses rather than stay open on stale options.
+      if (usePlanStore.getState().selection?.unitIds.includes(unitId)) select(null);
+
+      if (!speak) return;
 
       const after = sectorCoverage(next, toSector);
       const origin = from && from !== 'ALL' ? `Sector ${from}` : 'relay';
@@ -76,8 +85,22 @@ export function Review() {
         );
       }
     },
-    [moveUnit],
+    [moveUnit, select],
   );
+
+  /*
+   * Selecting a unit in the rail opens its group on the map, so the unit's own
+   * marker is there to see (and to drag). Selecting a group shows the group
+   * marker itself, lit.
+   */
+  useEffect(() => {
+    if (!selection) return;
+    if (selection.key.startsWith('unit:')) {
+      setFanned({ target: selection.sector, type: unitType(selection.unitIds[0]) });
+    } else if (selection.key.startsWith('group:')) {
+      setFanned(null);
+    }
+  }, [selection]);
 
   const handleMapMove = useCallback(
     (unitId: string, toSector: SectorId) => handleMove(unitId, toSector, false),
@@ -113,13 +136,13 @@ export function Review() {
 
   const handleClearPlan = useCallback(() => {
     clearPlan();
-    // Counted after the fact, because locked units keep their tasking and the
-    // operator should hear how many did.
-    const kept = usePlanStore.getState().lockedUnits.length;
+    // Counted after the fact, because units in a locked sector keep their
+    // tasking and the operator should hear how many did.
+    const kept = Object.keys(usePlanStore.getState().assignments).length;
     setAnnouncement(
       kept > 0
-        ? `Plan cleared. ${unassignedCount(usePlanStore.getState().assignments)} units back in the roster; ${kept} locked ${
-            kept === 1 ? 'unit keeps its' : 'units keep their'
+        ? `Plan cleared. ${unassignedCount(usePlanStore.getState().assignments)} units back in the roster; ${kept} ${
+            kept === 1 ? 'unit in a locked sector keeps its' : 'units in locked sectors keep their'
           } tasking.`
         : 'Plan cleared. Every unit is back in the roster.',
     );
@@ -132,52 +155,62 @@ export function Review() {
   ) as Record<SectorId, string[]>;
 
   return (
-    <Stage>
-      <MapLayer
-        assignments={assignments}
-        unitsBySector={unitsBySector}
-        relayUnits={unitsIn(assignments, 'ALL')}
-        coverage={coverage}
-        selectedSector={selectedSector}
-        fanned={fanned}
-        onFan={setFanned}
-        onMove={handleMapMove}
-        onRefuse={handleRefuse}
-      />
-
-      <TopBar
-        overall={overall(assignments)}
-        weakest={weakestSectorId}
-        weakestPercent={coverage[weakestSectorId]}
-        unassigned={unassignedCount(assignments)}
-        available={availableCount()}
-      />
-
-      <TaskingPanel
-        assignments={assignments}
-        unitsBySector={unitsBySector}
-        relayUnits={unitsIn(assignments, 'ALL')}
-        coverage={coverage}
-        staged={staged}
-        stagedCount={stagedCount(staged)}
-        lockedUnits={lockedUnits}
-        selectedSector={selectedSector}
-        onMove={handleMove}
-        onStage={handleStage}
-        onToggleLock={toggleSectorLock}
-        onRePropose={handleRePropose}
-        onClearPlan={handleClearPlan}
-        onReviewAndLaunch={() => navigate('/review/launch')}
-      />
-
-      <Legend />
-      <RestartDemo
-        onRestart={() => {
-          reset();
-          navigate('/overview');
-        }}
-      />
-      <LiveRegion message={announcement} />
-    </Stage>
+    <ConsoleShell
+      map={
+        <MapLayer
+          assignments={assignments}
+          unitsBySector={unitsBySector}
+          relayUnits={unitsIn(assignments, 'ALL')}
+          coverage={coverage}
+          selectedSector={selectedSector}
+          highlight={selection && selection.unitIds.length > 0 ? selection.unitIds : null}
+          fanned={fanned}
+          onFan={setFanned}
+          onMove={handleMapMove}
+          onRefuse={handleRefuse}
+        />
+      }
+      chrome={
+        <>
+          <TopBar
+            overall={overall(assignments)}
+            weakest={weakestSectorId}
+            weakestPercent={coverage[weakestSectorId]}
+            unassigned={unassignedCount(assignments)}
+            available={availableCount()}
+            box={CHROME.header}
+            attention={planAttention(
+              coverage,
+              AVAILABLE_UNITS.map((unit) => unit.status),
+            )}
+            onRestart={() => {
+              reset();
+              navigate('/overview');
+            }}
+          />
+          <LiveRegion message={announcement} />
+        </>
+      }
+      rail={
+        <TaskingPanel
+          assignments={assignments}
+          unitsBySector={unitsBySector}
+          relayUnits={unitsIn(assignments, 'ALL')}
+          coverage={coverage}
+          staged={staged}
+          stagedCount={stagedCount(staged)}
+          lockedSectors={lockedSectors}
+          selectedSector={selectedSector}
+          selection={selection}
+          onSelect={select}
+          onMove={handleMove}
+          onStage={handleStage}
+          onToggleLock={toggleSectorLock}
+          onRePropose={handleRePropose}
+          onClearPlan={handleClearPlan}
+          onReviewAndLaunch={() => navigate('/review/launch')}
+        />
+      }
+    />
   );
 }

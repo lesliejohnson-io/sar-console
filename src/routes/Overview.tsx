@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CHROME, ConsoleShell } from '../components/ConsoleShell';
 import { DrawSectorsCard } from '../components/DrawSectorsCard';
-import { Legend } from '../components/Legend';
 import { OverviewMap } from '../components/OverviewMap';
 import { OverviewTopBar } from '../components/OverviewTopBar';
-import { RestartDemo } from '../components/RestartDemo';
 import { RosterPanel } from '../components/RosterPanel';
-import { Stage } from '../components/Stage';
 import { useReducedMotion } from '../lib/useReducedMotion';
 import { usePlanStore } from '../store/usePlanStore';
 import type { AssetType, SectorId } from '../data/types';
@@ -91,39 +89,45 @@ export function Overview() {
   }, [navigate, reducedMotion, sectorsDrawn]);
 
   return (
-    <Stage>
-      <OverviewMap
-        sectorsDrawn={sectorsDrawn}
-        selectedSector={sectorsDrawn ? selectedSector : null}
-        onSelectSector={selectSector}
-        hoveredType={hoveredType}
-        hover={hover}
-        onHover={setHover}
-      />
+    <ConsoleShell
+      map={
+        <>
+          <OverviewMap
+            sectorsDrawn={sectorsDrawn}
+            selectedSector={sectorsDrawn ? selectedSector : null}
+            onSelectSector={selectSector}
+            hoveredType={hoveredType}
+            hover={hover}
+            onHover={setHover}
+          />
 
-      <OverviewTopBar />
-
-      {!sectorsDrawn && (
-        <DrawSectorsCard drawRef={drawButton} onDraw={() => navigate('/overview')} />
-      )}
-
-      <RosterPanel
-        hoveredType={hoveredType}
-        onHoverType={setHoveredType}
-        hover={hover}
-        onUnitHover={setHover}
-        empty={!sectorsDrawn}
-        proposing={proposing}
-        onPropose={handlePropose}
-      />
-
-      <Legend />
-      <RestartDemo
-        onRestart={() => {
-          reset();
-          navigate('/overview');
-        }}
-      />
-    </Stage>
+          {!sectorsDrawn && (
+            <DrawSectorsCard drawRef={drawButton} onDraw={() => navigate('/overview')} />
+          )}
+        </>
+      }
+      chrome={
+        <>
+          <OverviewTopBar
+            box={CHROME.header}
+            onRestart={() => {
+              reset();
+              navigate('/overview');
+            }}
+          />
+        </>
+      }
+      rail={
+        <RosterPanel
+          hoveredType={hoveredType}
+          onHoverType={setHoveredType}
+          hover={hover}
+          onUnitHover={setHover}
+          empty={!sectorsDrawn}
+          proposing={proposing}
+          onPropose={handlePropose}
+        />
+      }
+    />
   );
 }

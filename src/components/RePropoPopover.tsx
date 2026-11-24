@@ -5,12 +5,15 @@ import { rePropoPreview, type Assignments } from '../store/usePlanStore';
 import type { SectorId } from '../data/types';
 import lockClosed from '../assets/icons/lock-closed.svg';
 
-/** Where the popover hangs under the Re-propose button, from frame 160:694. */
-export const POPOVER = { x: 1098, y: 66, width: 320 };
+/**
+ * Where the popover hangs under the Re-propose button, from frame 160:694, in
+ * the rail's own coordinates: the frame's (1098, 66) less the rail's corner.
+ */
+export const POPOVER = { x: 51, y: 54, width: 320 };
 
 export interface RePropoPopoverProps {
   assignments: Assignments;
-  lockedUnits: string[];
+  lockedSectors: SectorId[];
   /** The sector the "<Sector> only" scope would apply to, if one is selected. */
   selectedSector: SectorId | null;
   onConfirm: (scope: SectorId | 'all') => void;
@@ -21,14 +24,14 @@ export interface RePropoPopoverProps {
  * Asking the autonomy for the plan again (frame 160:694).
  *
  * The popover exists to answer one question before the operator commits:
- * what of mine survives this? So it leads with what it keeps — every locked
- * unit and every unit the operator placed themselves — and only then says how
+ * what of mine survives this? So it leads with what it keeps — every unit in a
+ * locked sector and every unit the operator placed themselves — and only then says how
  * much it may move. Both figures come from the same preview the action is
  * built on, so neither can drift from what pressing the button actually does.
  */
 export function RePropoPopover({
   assignments,
-  lockedUnits,
+  lockedSectors,
   selectedSector,
   onConfirm,
   onCancel,
@@ -67,7 +70,7 @@ export function RePropoPopover({
     ref.current?.focus({ preventScroll: true });
   }, []);
 
-  const preview = rePropoPreview(assignments, lockedUnits, scope);
+  const preview = rePropoPreview(assignments, lockedSectors, scope);
   const span =
     preview.sectors.length > 1
       ? `Sectors ${preview.sectors[0]}–${preview.sectors[preview.sectors.length - 1]}`

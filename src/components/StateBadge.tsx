@@ -36,6 +36,16 @@ const SHAPES: Record<UnitStatus, { d: string; className: string; stroke?: number
   },
 };
 
+/** Each state in words: the full key, and every marker's tooltip. */
+export const STATE_NAME: Record<UnitStatus, string> = {
+  ready: 'Ready',
+  autonomous: 'Autonomous',
+  'needs-operator': 'Needs operator',
+  degraded: 'Degraded',
+  'out-of-contact': 'Out of contact',
+  unavailable: 'Unavailable',
+};
+
 export function StateBadge({ status, size = 10 }: { status: UnitStatus; size?: number }) {
   const shape = SHAPES[status];
   return (

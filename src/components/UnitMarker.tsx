@@ -1,16 +1,16 @@
 import { useDraggable } from '@dnd-kit/core';
 import { MARKER } from '../data/mapGeometry';
 import { UNITS_BY_ID } from '../data/assets';
-import { MarkerFace, padded } from './GroupMarker';
-import { useStageScale } from './Stage';
+import { MarkerFace, markerTitle, padded } from './GroupMarker';
+import { useStageScale } from './ConsoleShell';
 
 /**
  * One unit, fanned out of its group and ready to be taken hold of. Same face
  * as the group marker, but the pill carries the whole ID ("KRK · 03") because
  * the operator is about to move this one and needs to know which it is.
  *
- * The transform is divided by the stage scale: dnd-kit measures the drag in
- * client pixels while this element lives inside the scaled stage, so the raw
+ * The transform is divided by the map plane's scale: dnd-kit measures the drag
+ * in client pixels while this element lives inside the scaled plane, so the raw
  * delta would move it too far and it would drift out from under the cursor.
  */
 export function UnitMarker({
@@ -46,6 +46,7 @@ export function UnitMarker({
           ? `translate3d(${transform.x / scale}px, ${transform.y / scale}px, 0)`
           : undefined,
       }}
+      title={markerTitle([unitId], unit.status)}
       aria-label={`${unitId}. Press space to pick up, arrow keys to move, space to drop.`}
       {...listeners}
       {...attributes}

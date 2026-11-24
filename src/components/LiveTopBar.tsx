@@ -4,6 +4,7 @@ import { INCIDENT } from '../data/live';
 import { elapsedLabel } from '../lib/live';
 import { StatDivider, TopBarChrome } from './TopBar';
 import type { SectorLive } from '../store/useLiveStore';
+import type { Attention } from '../lib/attention';
 
 export interface LiveTopBarProps {
   minute: number;
@@ -13,7 +14,9 @@ export interface LiveTopBarProps {
   inContact: number;
   available: number;
   /** Where the bar sits; the live shell stretches it across the map area. */
-  box?: CSSProperties;
+  box: CSSProperties;
+  attention: Attention;
+  onRestart: () => void;
 }
 
 /**
@@ -36,11 +39,13 @@ export function LiveTopBar({
   inContact,
   available,
   box,
+  attention,
+  onRestart,
 }: LiveTopBarProps) {
   const behind = worst !== null && worst.behind > 0;
 
   return (
-    <TopBarChrome statRight={0} box={box}>
+    <TopBarChrome box={box} attention={attention} onRestart={onRestart}>
       <div className="flex shrink-0 items-center gap-[5px] overflow-hidden whitespace-nowrap">
         <p className="text-[12px] text-text-secondary">Live:</p>
         <p className="text-[15px] font-semibold text-text-primary">{elapsedLabel(minute)}</p>

@@ -40,8 +40,11 @@ export const PROPOSED_STAGED: Record<SectorId, boolean> = {
   D: false,
 };
 
-/** Units the autonomy may not move on re-propose. */
-export const PROPOSED_LOCKED_UNITS: string[] = range('HYD', 21, 24);
+/**
+ * Sectors the autonomy may not re-task on re-propose. Locks are by sector
+ * only, and the plan opens with none.
+ */
+export const PROPOSED_LOCKED_SECTORS: SectorId[] = [];
 
 /** Sector selected when the screen opens. */
 export const PROPOSED_SELECTED_SECTOR: SectorId = 'D';

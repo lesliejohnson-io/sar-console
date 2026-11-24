@@ -18,6 +18,7 @@ import {
   RELAY_MARKER,
   SECTOR_LABEL_POS,
   STAGE,
+  HIGHLIGHT_DIM,
 } from '../data/mapGeometry';
 import {
   SECTOR_FILL_OPACITY,
@@ -47,6 +48,8 @@ export interface MapLayerProps {
   relayUnits: string[];
   coverage: Record<SectorId, number>;
   selectedSector: SectorId | null;
+  /** The units selected in the rail; everything else fades. */
+  highlight: string[] | null;
   fanned: FannedGroupId | null;
   onFan: (group: FannedGroupId | null) => void;
   onMove: (unitId: string, toSector: SectorId) => void;
@@ -59,11 +62,17 @@ export function MapLayer({
   relayUnits,
   coverage,
   selectedSector,
+  highlight,
   fanned,
   onFan,
   onMove,
   onRefuse,
 }: MapLayerProps) {
+  const lit = highlight ? new Set(highlight) : null;
+  /** A marker that stands for none of the selected units fades back. */
+  const fadeFor = (unitIds: string[]) =>
+    lit !== null && !unitIds.some((id) => lit.has(id)) ? HIGHLIGHT_DIM : undefined;
+
   const paths = useRef<Record<string, SVGPathElement | null>>({});
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<SectorId | null>(null);
@@ -185,7 +194,7 @@ export function MapLayer({
       <div
         role="region"
       aria-label="Mission map: sectors and the units proposed for each"
-      className="absolute inset-0 overflow-hidden border border-border-subtle bg-map-backdrop"
+      className="absolute inset-0 overflow-hidden bg-map-backdrop"
         style={{ width: STAGE.width, height: STAGE.height }}
         onClick={() => onFan(null)}
       >
@@ -251,7 +260,7 @@ export function MapLayer({
 
         {relayUnits.length > 0 &&
           (isFanned(fanned, 'ALL', 'GRF') ? (
-            <FannedGroup unitIds={relayUnits} anchor={RELAY_MARKER} />
+            <FannedGroup unitIds={relayUnits} anchor={RELAY_MARKER} highlight={lit} />
           ) : (
             <GroupMarker
               type="GRF"
@@ -259,6 +268,7 @@ export function MapLayer({
               status={UNITS_BY_ID[relayUnits[0]].status}
               x={RELAY_MARKER.x}
               y={RELAY_MARKER.y}
+              opacity={fadeFor(relayUnits)}
               expanded={false}
               onExpand={() => onFan({ target: 'ALL', type: 'GRF' })}
             />
@@ -277,6 +287,7 @@ export function MapLayer({
                   key={`${sector.id}-${group.type}`}
                   unitIds={group.unitIds}
                   anchor={anchor}
+                  highlight={lit}
                 />
               );
             }
@@ -289,6 +300,7 @@ export function MapLayer({
                 status={UNITS_BY_ID[group.unitIds[0]].status}
                 x={anchor.x}
                 y={anchor.y}
+                opacity={fadeFor(group.unitIds)}
                 expanded={false}
                 onExpand={() => onFan({ target: sector.id, type: group.type })}
               />

@@ -14,7 +14,7 @@ const FEED_BOX: CSSProperties = {
  *
  * It sits on the map rather than in the rail, and it is anchored by its bottom
  * edge: an open incident makes the card grow upward out of the feed instead of
- * pushing the feed down over the legend. Timestamps are mission clock, in the
+ * pushing the feed down off the screen. Timestamps are mission clock, in the
  * mono face, so a column of times stays a column.
  */
 export function EventFeed({
@@ -40,7 +40,7 @@ export function EventFeed({
   return (
     <section
       aria-label="Event feed"
-      className="absolute flex flex-col items-start overflow-hidden rounded-[10px] border border-border-subtle bg-surface-panel pt-[10px] pr-[14px] pb-[8px] pl-[14px] shadow-top-bar"
+      className="absolute flex flex-col items-start overflow-hidden border border-border-subtle bg-surface-panel pt-[10px] pr-[14px] pb-[8px] pl-[14px] shadow-top-bar"
       style={box}
     >
       <div className={`flex w-full items-start overflow-hidden ${hidden ? '' : 'pb-[6px]'}`}>
